@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">VolumeSwipe</string>
+	<string name="incomp_device_title">Incompatible device</string>
+    <string name="ok">OK</string>
+    <string name="min">min</string>
+	<string name="percent_25">25%</string>    
+    <string name="percent_50">50%</string>    
+    <string name="percent_75">75%</string>    
+    <string name="percent_100">100%</string>  
+    <string name="led">Other lights</string>  
+    <string name="custom0">night1</string>
+    <string name="custom1">night2</string>
+    <string name="custom2">night3</string>
+    <string name="custom3">day1</string>
+    <string name="custom4">day2</string>
+    <string name="info">If VolumeSwipe is active, you can adjust the volume
+        in selected media applications (Amazon Video and Audio, aVia, Hulu+, Gallery Video, Mortplayer, Netflix and VPlayer)
+        by swiping along the side of the screen.</string>
+    <string name="infoActiveInAll">If VolumeSwipe is active, you can adjust the volume
+        applications by swiping along the side of the screen.</string>
+    <string-array name="boost_amounts">
+        <item>small</item>
+        <item>medium</item>
+        <item>large</item>      
+    </string-array>
+    <string-array name="layouts">
+        <item>never_compact</item>
+        <item>auto</item>
+        <item>always_compact</item>
+    </string-array>
+    <string-array name="layout_labels">
+        <item>always full screen</item>
+        <item>compact from notification</item>
+        <item>always compact</item>
+    </string-array>
+    <string-array name="notification_labels">
+<!--         <item>never</item>  -->
+        <item>when active</item>
+		<item>always</item>
+        </string-array>
+     <string-array name="notifications">
+<!--         <item>0</item>  -->
+        <item>1</item>
+        <item>2</item>
+        </string-array>
+
+</resources>
