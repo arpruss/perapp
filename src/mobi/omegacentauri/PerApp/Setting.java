@@ -6,8 +6,11 @@ import java.net.URLEncoder;
 
 import org.apache.http.client.utils.URIUtils;
 
+import android.R;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.SharedPreferences;
+import android.view.View;
 
 public abstract class Setting {
 	protected String id;
@@ -112,6 +115,10 @@ public abstract class Setting {
 			load(null);
 		
 		set();
+	}
+	
+	protected View getDialogView(Activity activity, int id) {
+		return View.inflate(activity, id, null);
 	}
 
 	public void dialog(Activity activity, String app) {				
