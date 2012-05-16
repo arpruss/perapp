@@ -6,11 +6,18 @@ import java.net.URLEncoder;
 
 import org.apache.http.client.utils.URIUtils;
 
-import android.R;
+import mobi.omegacentauri.PerApp.R;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.provider.Settings.SettingNotFoundException;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
 public abstract class Setting {
 	protected String id;
@@ -21,10 +28,18 @@ public abstract class Setting {
 	private static final int SKIP = 0;
 	private static final int DEFAULT = 1;
 	private static final int SET = 2;
+	private Spinner spin;
+	protected Context context;
+	
 	public static final String modes[] = { "Keep previous", "Defaults", "Customize" };
 	
-	public Setting(SharedPreferences pref) {
+	public Setting(Context context, SharedPreferences pref) {
+		this.context = context;
 		this.pref = pref;
+	}
+	
+	public boolean isSupported() {
+		return true;
 	}
 	
 	public String getName() {
@@ -47,19 +62,19 @@ public abstract class Setting {
 		return getId() + "..app.." + app;  
 	}
 	
-	public static int getMode(SharedPreferences pref, String app) {
+	protected int getMode(String app) {
 		return pref.getInt(getModePrefName(app), DEFAULT);
 	}
 	
-	public static void setMode(SharedPreferences pref, String app, int mode) {
+	protected void setMode(String app, int mode) {
 		pref.edit().putInt(getModePrefName(app), mode).commit();
 	}
 	
-	private static String getModePrefName(String app) {
+	protected String getModePrefName(String app) {
 		if (app == null)
 			app = "";
 		
-		return "mode.." + app;  
+		return getId() + "..mode.." + app;  
 	}
 	
 	public void load(String app) {
@@ -67,6 +82,8 @@ public abstract class Setting {
 		if (v == null) {
 			v = pref.getString(getValuePrefName(null), getDefaultValue());
 		}
+		
+		PerApp.log("decoding "+v);
 		
 		decode(v);
 	}
@@ -86,6 +103,7 @@ public abstract class Setting {
 		catch (NumberFormatException e) {
 			intValue = Integer.parseInt(defaultValue);
 		}
+		PerApp.log("Value "+intValue);
 	}
 	
 	private void decode(String in) {
@@ -105,6 +123,8 @@ public abstract class Setting {
 	
 	public void set(String app) {
 		int mode = pref.getInt(getModePrefName(app), DEFAULT);
+		
+		PerApp.log("mode "+mode);
 
 		if (mode == SKIP) 
 			return;
@@ -117,10 +137,52 @@ public abstract class Setting {
 		set();
 	}
 	
-	protected View getDialogView(Activity activity, int id) {
-		return View.inflate(activity, id, null);
+	protected View getDialogView(Activity activity, Builder builder, int id, final String app) {
+		load(app);
+
+		builder.setTitle(name);
+		
+		View v = View.inflate(activity, id, null);
+		builder.setView(v);
+		
+		spin = (Spinner)v.findViewById(R.id.mode_spinner);
+		ArrayAdapter<String> aa = new ArrayAdapter<String>(activity, 
+				android.R.layout.simple_spinner_item,
+				Setting.modes);
+		aa.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		spin.setAdapter(aa);
+		spin.setSelection(getMode(app));
+		spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+			@Override
+			public void onItemSelected(AdapterView<?> arg0, View arg1,
+					int mode, long arg3) {
+				setMode(app, mode);
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> arg0) {
+			}
+		});
+
+		return v;
 	}
 
 	public void dialog(Activity activity, String app) {				
+	}
+	
+	protected void saveCustom(String app) {
+		save(app);
+		spin.setSelection(SET);
+		setMode(app, SET);
+	}
+	
+	protected void updateSystemSetting(ContentResolver cr, String s, int v) {
+		try {
+			if (android.provider.Settings.System.getInt(cr, s) == v)
+				return;
+		} catch (SettingNotFoundException e) {
+		}
+		android.provider.Settings.System.putInt(cr,s,v);
 	}
 }

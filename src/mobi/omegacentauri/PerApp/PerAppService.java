@@ -59,6 +59,9 @@ public class PerAppService extends Service implements OnTouchListener {
 	private VolumeController vc;
 	private float scale;
 	private static final int windowType = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT; // PHONE, ALERT, DIALOG, OVERLAY, ERROR
+	private Setting[] settings;
+	private Thread logThread = null;
+	private Runnable logRunnable;
 	
 	private static final String[] intercept = {
 		"com.amazon.avod.client.activity.MediaPlayerActivity",
@@ -140,25 +143,10 @@ public class PerAppService extends Service implements OnTouchListener {
 		return false;
 	}
 	
-	private void processRestart(String process) {
-		PerApp.log("monitored:"+process);
-		if (activeFor(process)) {
-			try {
-				messenger.send(Message.obtain(null, IncomingHandler.MSG_ON, 0, 0));
-				if (process.startsWith("mobi.omegacentauri.PerApp.")) {
-					messenger.send(Message.obtain(null, IncomingHandler.MSG_VISIBLE, 0, 0));					
-				}
-				else {
-					messenger.send(Message.obtain(null, IncomingHandler.MSG_HIDDEN, 0, 0));
-				}
-			} catch (RemoteException e) {
-			}
-		}
-		else {
-			try {
-				messenger.send(Message.obtain(null, IncomingHandler.MSG_OFF, 0, 0));
-			} catch (RemoteException e) {
-			}
+	private void activityResume(String packageName) {
+		for (Setting s: settings) {
+			PerApp.log("setting "+s.getName()+" for "+packageName);
+			s.set(packageName);
 		}
 	}
 	
@@ -170,19 +158,29 @@ public class PerAppService extends Service implements OnTouchListener {
 			
 			try {
 				PerApp.log("logcat monitor starting");
-				String[] cmd = { "logcat", "-b", "events" };
+				String[] cmd = { "logcat", "-b", "events", "-c" };
 				p = Runtime.getRuntime().exec(cmd);
+				try {
+					p.waitFor();
+				} catch (InterruptedException e) {
+				}
+				String[] cmd2 = { "logcat", "-b", "events" };
+				p = Runtime.getRuntime().exec(cmd2);
 				reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
 				PerApp.log("reading");
 				
 				String line;
 				Pattern pattern = Pattern.compile
-					("I/am_on_resume_called.*:\\s+(.*)"); // .*\\[[^,\\]]+,[^,\\]]+,([^,\\]]+)"); 
+					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,([^/]*).*\\]");  
 				
 				while (null != (line = reader.readLine())) {
 					Matcher m = pattern.matcher(line);
 					if (m.find()) {
-						processRestart(m.group(1));
+						activityResume(m.group(2));
+					}
+					else {
+						if (line.contains("am_resume_activity") || line.contains("am_restart_activity"))
+							PerApp.log("Should have matched "+line);
 					}
 				}
 				
@@ -212,6 +210,8 @@ public class PerAppService extends Service implements OnTouchListener {
 	public void onCreate() {
 		PerApp.log("Creating service");
 		options = PreferenceManager.getDefaultSharedPreferences(this);
+		
+		settings = PerApp.getSettings(this, options);
 		
         wm = (WindowManager)getSystemService(WINDOW_SERVICE);        
         am = (AudioManager)getSystemService(AUDIO_SERVICE);
@@ -257,17 +257,19 @@ public class PerAppService extends Service implements OnTouchListener {
 
 		startForeground(PerApp.NOTIFICATION_ID, n);
 		
-		new Thread(new Runnable(){
-
+		Runnable logRunnable = new Runnable(){
 			@Override
 			public void run() {
 				monitorLog();
-			}}).start();
+			}};  
+		logThread = new Thread(logRunnable);
 		
+		logThread.start();
 		PerApp.log("Ready");
 		
-		if (!defaultHidden)
-			show();
+//		if (!defaultHidden)
+//			show();
+		hide();
 	}
 	
 	private void adjustParams() {
@@ -280,6 +282,10 @@ public class PerAppService extends Service implements OnTouchListener {
 		if (ll != null) {
 			wm.removeView(ll);
 			ll = null;
+		}
+		if (logThread != null) {
+			logThread.stop();
+			logThread = null;
 		}
 		PerApp.log("Destroying service, destroying notification =" + (Options.getNotify(options) != Options.NOTIFY_ALWAYS));
 		stopForeground(Options.getNotify(options) != Options.NOTIFY_ALWAYS);

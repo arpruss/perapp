@@ -86,10 +86,26 @@ public class PerApp extends Activity implements ServiceConnection {
 
 	static final int NOTIFICATION_ID = 1;
 	
-	public static Setting[] getSettings(SharedPreferences pref) {
-		return new Setting[]{ 
-				new OrientationSetting(pref)				
+	public static Setting[] getSettings(Context context, SharedPreferences pref) {
+		Setting[] allSettings = new Setting[]{ 
+				new BoostSetting(context, pref),
+				new OrientationSetting(context, pref),
 		};
+		
+		int count = 0;
+		for (int i=0; i<allSettings.length; i++)
+			if (allSettings[i].isSupported())
+				count++;
+		
+		Setting[] settings = new Setting[count];
+
+		count = 0;
+		for (int i=0; i<allSettings.length; i++) {
+			if (allSettings[i].isSupported())
+				settings[count++] = allSettings[i];
+		}
+		
+		return settings;
 	}
 
 	public static void log(String s) {
@@ -301,7 +317,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	}
 	
 	private void chooseSetting(final String app) {
-		final Setting[] settings = getSettings(options);
+		final Setting[] settings = getSettings(this, options);
 		String[] settingNames = new String[settings.length];
 
 		for (int i=0; i<settings.length; i++)
@@ -309,7 +325,7 @@ public class PerApp extends Activity implements ServiceConnection {
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		final AlertDialog dialog; 
-		builder.setTitle("Choose setting");
+//		builder.setTitle("Choose setting");
 		
 		View v = View.inflate(this, R.layout.choose_setting, null);
 		
@@ -326,26 +342,6 @@ public class PerApp extends Activity implements ServiceConnection {
 			}        	
         });
 		
-		Spinner spin = (Spinner)v.findViewById(R.id.mode);
-		ArrayAdapter<String> aa = new ArrayAdapter<String>(this, 
-				android.R.layout.simple_spinner_item,
-				Setting.modes);
-		aa.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		spin.setAdapter(aa);
-		spin.setSelection(Setting.getMode(options, app));
-		spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-
-			@Override
-			public void onItemSelected(AdapterView<?> arg0, View arg1,
-					int mode, long arg3) {
-				Setting.setMode(options, app, mode);
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> arg0) {
-			}
-		});
-
 		builder.setView(v);
 
 		dialog = builder.create();
@@ -515,12 +511,12 @@ public class PerApp extends Activity implements ServiceConnection {
 		return Build.MODEL.equalsIgnoreCase("Kindle Fire");
 	}
 
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.main, menu);
-		
-		return true;
-	}
+//	@Override
+//	public boolean onCreateOptionsMenu(Menu menu) {
+//		getMenuInflater().inflate(R.menu.main, menu);
+//		
+//		return true;
+//	}
 
 
 	public void sendMessage(int n, int arg1, int arg2) {
@@ -538,11 +534,11 @@ public class PerApp extends Activity implements ServiceConnection {
 	public void onServiceConnected(ComponentName classname, IBinder service) {
 		log("connected");
 		messenger = new Messenger(service);
-		try {
+/*		try {
 			messenger.send(Message.obtain(null, IncomingHandler.MSG_ON, 0, 0));
 			messenger.send(Message.obtain(null, IncomingHandler.MSG_VISIBLE, 0, 0));
 		} catch (RemoteException e) {
-		}
+		} */
 	}
 
 	@Override

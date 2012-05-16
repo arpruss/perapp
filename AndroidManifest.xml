@@ -33,7 +33,8 @@
      <uses-sdk android:minSdkVersion="4" />
      
     <uses-permission android:name="android.permission.READ_LOGS"/>
-     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     
 </manifest>
