@@ -83,11 +83,15 @@ public class PerAppService extends Service implements OnTouchListener {
 		public static final int MSG_HIDDEN = 3;
 		public static final int MSG_ADJUST = 4;
 		public static final int MSG_BOOST = 5;
+		public static final int MSG_RELOAD_SETTINGS = 6;
 		
 		@Override 
 		public void handleMessage(Message m) {
 			PerApp.log("Message: "+m.what);
 			switch(m.what) {
+			case MSG_RELOAD_SETTINGS:
+				settings = PerApp.getSettings(PerAppService.this, options);
+				break;
 			case MSG_ON:
 				if (ll != null) {
 					ll.setVisibility(View.VISIBLE);
@@ -129,7 +133,7 @@ public class PerAppService extends Service implements OnTouchListener {
 	}
 	
 	private void setBoost() {
-		vc = new VolumeController(PerAppService.this, options.getBoolean(Options.PREF_BOOST, false) ? BOOST: 0f);		
+		vc = null; // new VolumeController(PerAppService.this, options.getBoolean(Options.PREF_BOOST, false) ? BOOST: 0f);		
 	}
 	
 	private boolean activeFor(String s) {
@@ -242,20 +246,23 @@ public class PerAppService extends Service implements OnTouchListener {
         wm.addView(ll, lp);
         ll.setVisibility(View.GONE);
         
-        ll.setOnTouchListener(this);
+//        ll.setOnTouchListener(this);
         
-		Notification n = new Notification(
-				R.drawable.brightnesson,
-				"PerApp", 
-				System.currentTimeMillis());
-		Intent i = new Intent(this, PerApp.class);
-		i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		n.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT; 
-		n.setLatestEventInfo(this, "PerApp", "PerApp is on", 
-				PendingIntent.getActivity(this, 0, i, 0));
-		PerApp.log("notify from service "+n.toString());
-
-		startForeground(PerApp.NOTIFICATION_ID, n);
+        if (Options.getNotify(options) != Options.NOTIFY_NEVER) {
+        	
+			Notification n = new Notification(
+					R.drawable.brightnesson,
+					"PerApp", 
+					System.currentTimeMillis());
+			Intent i = new Intent(this, PerApp.class);
+			i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			n.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT; 
+			n.setLatestEventInfo(this, "PerApp", "PerApp is on", 
+					PendingIntent.getActivity(this, 0, i, 0));
+			PerApp.log("notify from service "+n.toString());
+	
+			startForeground(PerApp.NOTIFICATION_ID, n);
+        }
 		
 		Runnable logRunnable = new Runnable(){
 			@Override

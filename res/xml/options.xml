@@ -7,8 +7,19 @@
 	android:entryValues="@array/notifications"
 	android:key="notification"
 	android:defaultValue="1"/>
-<CheckBoxPreference 
-    android:title="Active in all apps"
-    android:defaultValue="false"
-    android:key="activeInAll"/>
+<PreferenceCategory
+    android:title="Adjustable settings">
+<CheckBoxPreference
+    android:title="Orientation Lock" 
+    android:defaultValue="true"
+    android:key="OrientationSetting..active"/>
+<CheckBoxPreference
+    android:title="Screen Timeout" 
+    android:defaultValue="true"
+    android:key="TimeoutSetting..active"/>
+<CheckBoxPreference
+    android:title="Volume Boost" 
+    android:defaultValue="true"
+    android:key="BoostSetting..active"/>
+</PreferenceCategory>
 </PreferenceScreen>

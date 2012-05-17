@@ -55,8 +55,12 @@ public abstract class Setting {
 		return defaultValue;
 	}
 	
+	public Boolean isActive() {
+		return isSupported() && pref.getBoolean(getId() + "..active", true);
+	}
+	
 	private String getValuePrefName(String app) {
-		if (app == null)
+		if (app == null || app.equals(MyApplicationInfo.DEFAULT))
 			app = "";
 		
 		return getId() + "..app.." + app;  
@@ -80,6 +84,7 @@ public abstract class Setting {
 	public void load(String app) {
 		String v = pref.getString(getValuePrefName(app), null);
 		if (v == null) {
+			PerApp.log("Getting default from "+getValuePrefName(null));
 			v = pref.getString(getValuePrefName(null), getDefaultValue());
 		}
 		
@@ -88,7 +93,8 @@ public abstract class Setting {
 		decode(v);
 	}
 	
-	public void save(String app) {		
+	public void save(String app) {
+		PerApp.log("saving to "+getValuePrefName(app));
 		pref.edit().putString(getValuePrefName(app), encode()).commit();
 	}
 	
@@ -131,8 +137,10 @@ public abstract class Setting {
 		
 		if (mode == SET)
 			load(app);
-		else
+		else {
+			PerApp.log("loading default");
 			load(null);
+		}
 		
 		set();
 	}

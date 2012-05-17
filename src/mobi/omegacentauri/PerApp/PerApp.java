@@ -88,20 +88,21 @@ public class PerApp extends Activity implements ServiceConnection {
 	
 	public static Setting[] getSettings(Context context, SharedPreferences pref) {
 		Setting[] allSettings = new Setting[]{ 
-				new BoostSetting(context, pref),
 				new OrientationSetting(context, pref),
+				new TimeoutSetting(context, pref),
+				new BoostSetting(context, pref),
 		};
 		
 		int count = 0;
 		for (int i=0; i<allSettings.length; i++)
-			if (allSettings[i].isSupported())
+			if (allSettings[i].isActive())
 				count++;
 		
 		Setting[] settings = new Setting[count];
 
 		count = 0;
 		for (int i=0; i<allSettings.length; i++) {
-			if (allSettings[i].isSupported())
+			if (allSettings[i].isActive())
 				settings[count++] = allSettings[i];
 		}
 		
@@ -484,12 +485,12 @@ public class PerApp extends Activity implements ServiceConnection {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch(item.getItemId()) {
-		case R.id.change_log:
-			changeLog();
-			return true;
-		case R.id.help:
-			help();
-			return true;
+//		case R.id.change_log:
+//			changeLog();
+//			return true;
+//		case R.id.help:
+//			help();
+//			return true;
 //		case R.id.please_buy:
 //			new OtherApps(this, true);
 //			return true;
@@ -511,12 +512,12 @@ public class PerApp extends Activity implements ServiceConnection {
 		return Build.MODEL.equalsIgnoreCase("Kindle Fire");
 	}
 
-//	@Override
-//	public boolean onCreateOptionsMenu(Menu menu) {
-//		getMenuInflater().inflate(R.menu.main, menu);
-//		
-//		return true;
-//	}
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.main, menu);
+		
+		return true;
+	}
 
 
 	public void sendMessage(int n, int arg1, int arg2) {
@@ -534,11 +535,11 @@ public class PerApp extends Activity implements ServiceConnection {
 	public void onServiceConnected(ComponentName classname, IBinder service) {
 		log("connected");
 		messenger = new Messenger(service);
-/*		try {
-			messenger.send(Message.obtain(null, IncomingHandler.MSG_ON, 0, 0));
+		try {
+			messenger.send(Message.obtain(null, IncomingHandler.MSG_RELOAD_SETTINGS, 0, 0));
 			messenger.send(Message.obtain(null, IncomingHandler.MSG_VISIBLE, 0, 0));
 		} catch (RemoteException e) {
-		} */
+		} 
 	}
 
 	@Override

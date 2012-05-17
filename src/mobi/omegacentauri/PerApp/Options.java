@@ -52,7 +52,7 @@ public class Options extends PreferenceActivity {
 	public static int getNotify(SharedPreferences options) {
 		int n = Integer.parseInt(options.getString(PREF_NOTIFY, "1"));
 		if (n == NOTIFY_NEVER)
-			return NOTIFY_AUTO;
+			return NOTIFY_NEVER; // NOTIFY_AUTO?
 		else
 			return n;
 	}

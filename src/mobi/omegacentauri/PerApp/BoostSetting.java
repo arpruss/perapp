@@ -32,7 +32,7 @@ public class BoostSetting extends Setting {
 		
 		am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);		
 		
-		name = "Boost";
+		name = "Volume Boost";
 		id = "BoostSetting";
 		defaultValue = "0";
 	}
