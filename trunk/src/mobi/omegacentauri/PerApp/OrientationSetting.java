@@ -20,8 +20,8 @@ public class OrientationSetting extends Setting {
 	public OrientationSetting(Context context, SharedPreferences pref) {
 		super(context, pref);
 		
-		name = "Orientation";
-		id = "orientationSetting";
+		name = "Orientation Lock";
+		id = "OrientationSetting";
 		defaultValue = "0";
 	}
 	
