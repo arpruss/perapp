@@ -207,4 +207,25 @@ public abstract class Setting {
 		}
 		android.provider.Settings.System.putInt(cr,s,v);
 	}
+	
+	public String describe(String app) {
+		String out = "";
+		int mode = getMode(app);
+		
+		out += modes[mode];
+		
+		if (mode != SKIP) {
+			load(app);
+			String c = describeValue();
+			if (c != null) {
+				out += ": " + c;
+			}
+		}
+		
+		return out;
+	}
+	
+	protected String describeValue() {
+		return null;
+	}
 }

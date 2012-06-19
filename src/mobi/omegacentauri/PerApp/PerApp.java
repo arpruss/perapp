@@ -56,6 +56,7 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -318,11 +319,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	
 	private void chooseSetting(final String app) {
 		final Setting[] settings = getSettings(this, options);
-		String[] settingNames = new String[settings.length];
 
-		for (int i=0; i<settings.length; i++)
-			settingNames[i] = settings[i].getName(); 
-		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		final AlertDialog dialog; 
 //		builder.setTitle("Choose setting");
@@ -330,8 +327,27 @@ public class PerApp extends Activity implements ServiceConnection {
 		View v = View.inflate(this, R.layout.choose_setting, null);
 		
 		ListView list = (ListView)v.findViewById(R.id.settings);
-		list.setAdapter(new ArrayAdapter<String>(this,
-				android.R.layout.simple_list_item_1, settingNames));
+		list.setAdapter(new ArrayAdapter<Setting>(this,android.R.layout.simple_list_item_2,
+				settings) {
+			@Override
+			public View getView(int position, View convertView, ViewGroup parent) {
+				View v;				
+				
+				if (convertView == null) {
+	                v = View.inflate(PerApp.this, android.R.layout.simple_list_item_2, null);
+	            }
+				else {
+					v = convertView;
+				}
+				
+				((TextView)v.findViewById(android.R.id.text1))
+					.setText(settings[position].getName());
+				((TextView)v.findViewById(android.R.id.text2))
+					.setText(settings[position].describe(app));
+				return v;
+			}
+				
+		});
 
 		list.setOnItemClickListener(new OnItemClickListener() {
 

@@ -139,4 +139,9 @@ public class BoostSetting extends Setting {
 			eq = null;
 		}
 	}
+	
+	@Override
+	protected String describeValue() {
+		return ""+intValue;
+	}
 }

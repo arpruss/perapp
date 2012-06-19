@@ -51,4 +51,12 @@ public class OrientationSetting extends Setting {
 		updateSystemSetting(cr, android.provider.Settings.System.ACCELEROMETER_ROTATION,				
 				1-intValue);
 	}
+	
+	@Override
+	protected String describeValue() {
+		if (intValue == 0)
+			return "rotate";
+		else
+			return "lock";
+	}
 }
