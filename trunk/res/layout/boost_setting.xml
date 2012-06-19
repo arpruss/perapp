@@ -31,10 +31,12 @@
 </LinearLayout>
 
     <TextView
-        android:id="@+id/warning"
-        android:layout_width="wrap_content"
+        android:id="@+id/warn"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text=" "/>
+        android:paddingTop="10sp"
+        android:paddingBottom="10sp"
+        android:text="Warning: Playing audio at high volumes may damage speakers/hearing.  ALL USE IS AT YOUR OWN RISK.  Particularly beware of boosts above 40%, especially with music." />
     
     <LinearLayout 
         android:layout_width="match_parent" 

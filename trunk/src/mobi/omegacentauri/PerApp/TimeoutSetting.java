@@ -43,6 +43,11 @@ public class TimeoutSetting extends Setting {
 		}
 		
 	}
+	
+	@Override
+	protected String describeValue() {
+		return getPrintableValue(intValue);
+	}
 
 	public void dialog(Activity activity, final String app) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
