@@ -74,7 +74,6 @@ public class PerApp extends Activity implements ServiceConnection {
 	
 
 	private CheckBox activeBox;
-	private CheckBox boostBox;
 	private boolean active;
 
 	private Messenger messenger = null;
@@ -105,6 +104,8 @@ public class PerApp extends Activity implements ServiceConnection {
 			if (allSettings[i].isActive())
 				settings[count++] = allSettings[i];
 		}
+		
+		log(""+count+" settings active");
 		
 		return settings;
 	}
@@ -181,9 +182,7 @@ public class PerApp extends Activity implements ServiceConnection {
 		ed.commit();           
 		
 		String msg;
-		msg = "With PerApp, you can set the volume in the Amazon video player and "+
-			  "selected other applications by swiping along the side of the screen.  You "+
-			  "are responsible for ensuring that the volume boost feature does not damage your hearing.";
+		msg = "With PerApp, you can have some different settings in different applications";
 		message("Welcome", msg);
 	}
 
@@ -398,9 +397,14 @@ public class PerApp extends Activity implements ServiceConnection {
 		
 	}
 
-	public static void setNotification(Context c, NotificationManager nm, boolean active) {
+	public void setNotification(Context c, NotificationManager nm, boolean active) {
+		int icon = active?R.drawable.brightnesson:R.drawable.brightnessoff;
+		
+		if (Options.getNotify(options) == Options.NOTIFY_NEVER)
+			icon = 0;
+		
 		Notification n = new Notification(
-				active?R.drawable.brightnesson:R.drawable.brightnessoff,
+				icon,
 				"PerApp", 
 				System.currentTimeMillis());
 		Intent i = new Intent(c, PerApp.class);		
@@ -416,13 +420,10 @@ public class PerApp extends Activity implements ServiceConnection {
 		updateNotification(this, options, notificationManager, active);
 	}
 	
-	public static void updateNotification(Context c, 
+	public void updateNotification(Context c, 
 			SharedPreferences options, NotificationManager nm, boolean active) {
 		log("notify "+Options.getNotify(options));
 		switch(Options.getNotify(options)) {
-		case Options.NOTIFY_NEVER:
-			nm.cancelAll();
-			break;
 		case Options.NOTIFY_AUTO:
 			if (active)
 				setNotification(c, nm, active);
@@ -431,6 +432,7 @@ public class PerApp extends Activity implements ServiceConnection {
 				nm.cancelAll();
 			}
 			break;
+		case Options.NOTIFY_NEVER:
 		case Options.NOTIFY_ALWAYS:
 			setNotification(c, nm, active);
 			break;
@@ -451,7 +453,7 @@ public class PerApp extends Activity implements ServiceConnection {
         (new GetApps(this, appsList)).execute();
         
         if (active) {
-			bind();
+			restartService(true);
 		}			
 	}
 
@@ -518,7 +520,6 @@ public class PerApp extends Activity implements ServiceConnection {
 		
 		return true;
 	}
-
 
 	public void sendMessage(int n, int arg1, int arg2) {
 		if (messenger == null) 

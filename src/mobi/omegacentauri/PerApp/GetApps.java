@@ -14,6 +14,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.view.View;
@@ -109,7 +110,14 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 				}
 
 				final MyApplicationInfo a = appInfo.get(position);
-				((TextView)v.findViewById(android.R.id.text1)).setText(a.getLabel());
+				TextView tv = ((TextView)v.findViewById(android.R.id.text1));
+				tv.setText(a.getLabel());
+				if (a.packageName.equals(MyApplicationInfo.DEFAULT)) {
+					tv.setTypeface(Typeface.DEFAULT_BOLD);
+				}
+				else {
+					tv.setTypeface(Typeface.DEFAULT);
+				}
 				return v;
 			}				
 		};

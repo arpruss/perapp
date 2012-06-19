@@ -23,6 +23,7 @@ public class BoostSetting extends Setting {
 	private AudioManager am;
 	private Equalizer eq = null;
 	private static final int MAX_BOOST = 15;
+	private boolean shape;
 	
 	public BoostSetting(Context context, SharedPreferences pref) {
 		super(context, pref);
@@ -35,6 +36,8 @@ public class BoostSetting extends Setting {
 		name = "Volume Boost";
 		id = "BoostSetting";
 		defaultValue = "0";
+		
+		shape = pref.getBoolean("shapeBoost", true);
 	}
 
 	@Override
@@ -56,25 +59,16 @@ public class BoostSetting extends Setting {
 		return s; 
 	}
 	
-	private String getWarning(int i) {
-		if (i<8)
-			return "";
-		else
-			return "Warning: May damage speakers/hearing.";
-	}
-	
 	public void dialog(Activity activity, final String app) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
 		
 		View v = getDialogView(activity, builder, R.layout.boost_setting, app);
 		
 		final TextView tv = (TextView)v.findViewById(R.id.boost_value);
-		final TextView warn = (TextView)v.findViewById(R.id.warning);
 
 		SeekBar bar = (SeekBar)v.findViewById(R.id.boost);
 		bar.setProgress(intValue);
 		tv.setText(""+intValue);
-		warn.setText(getWarning(intValue));
 		
 		bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
 
@@ -83,7 +77,6 @@ public class BoostSetting extends Setting {
 					boolean fromUser) {
 				BoostSetting.this.intValue = progress;
 				tv.setText(""+progress);
-				warn.setText(getWarning(progress));
 				
 				if (fromUser)
 					saveCustom(app);
@@ -122,8 +115,23 @@ public class BoostSetting extends Setting {
 			if (intValue > MAX_BOOST)
 				intValue = MAX_BOOST;
 			
-			for (int i=eq.getNumberOfBands()-1; i>=0; i--)
-				eq.setBandLevel((short)i, (short)(intValue*100));
+			short v = (short)(intValue*100);
+
+			for (int i=eq.getNumberOfBands()-1; i>=0; i--) {
+				
+				short adj = v;
+
+				if (shape) {
+					int hz = eq.getCenterFreq((short)i)/1000;
+					if (hz < 150)
+						adj = 0;
+					else if (hz < 250)
+						adj = (short)(v/2);
+					else if (hz > 8000)
+						adj = (short)(3*(int)v/4);
+				}
+				eq.setBandLevel((short)i, adj);
+			}
 			
 			eq.setEnabled(true);
 		}
