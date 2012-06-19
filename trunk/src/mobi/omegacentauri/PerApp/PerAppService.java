@@ -2,7 +2,9 @@ package mobi.omegacentauri.PerApp;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,6 +19,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.RadialGradient;
 import android.graphics.Typeface;
 import android.location.Address;
 import android.media.AudioManager;
@@ -27,6 +30,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.util.EventLog;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -43,7 +47,7 @@ public class PerAppService extends Service implements OnTouchListener {
 	private int startVolume;
 	private float startY;
 	private Info info;
-	
+
 	private boolean defaultHidden = true;
 	private static final int HEIGHT_DELTA_DP = 50;
 	private static final float BOOST = 0.4f;
@@ -62,7 +66,9 @@ public class PerAppService extends Service implements OnTouchListener {
 	private Setting[] settings;
 	private Thread logThread = null;
 	private Runnable logRunnable;
-	
+	private boolean interruptReader;
+	private Process logProcess;
+
 	private static final String[] intercept = {
 		"com.amazon.avod.client.activity.MediaPlayerActivity",
 		"com.netflix.mediaclient.PlayerActivityPlus",
@@ -90,7 +96,7 @@ public class PerAppService extends Service implements OnTouchListener {
 			PerApp.log("Message: "+m.what);
 			switch(m.what) {
 			case MSG_RELOAD_SETTINGS:
-				settings = PerApp.getSettings(PerAppService.this, options);
+				PerAppService.this.getSettings();
 				break;
 			case MSG_ON:
 				if (ll != null) {
@@ -133,7 +139,7 @@ public class PerAppService extends Service implements OnTouchListener {
 	}
 	
 	private void setBoost() {
-		vc = null; // new VolumeController(PerAppService.this, options.getBoolean(Options.PREF_BOOST, false) ? BOOST: 0f);		
+		vc = null; // new VolumeController(PerAppService.this, options.getBoolean(Options.PREF_BOOST, false) ? BOOST: 0f);
 	}
 	
 	private boolean activeFor(String s) {
@@ -146,82 +152,104 @@ public class PerAppService extends Service implements OnTouchListener {
 		}
 		return false;
 	}
-	
+
 	private void activityResume(String packageName) {
 		for (Setting s: settings) {
 			PerApp.log("setting "+s.getName()+" for "+packageName);
 			s.set(packageName);
 		}
 	}
-	
+
 	private void monitorLog() {
+		Random x = new Random();
+		BufferedReader logReader;
+
 		for(;;) {
+			logProcess = null;
 			
-			BufferedReader reader = null;
-			Process p = null;
-			
+			String marker = "mobi.omegacentauri.PerApp:marker:"+System.currentTimeMillis()+":"+x.nextLong()+":";
+			EventLog.writeEvent(1, marker);
+			String app = null;
+
 			try {
 				PerApp.log("logcat monitor starting");
-				String[] cmd = { "logcat", "-b", "events", "-c" };
-				p = Runtime.getRuntime().exec(cmd);
-				try {
-					p.waitFor();
-				} catch (InterruptedException e) {
-				}
+//				Log.v("PerApp", marker);
 				String[] cmd2 = { "logcat", "-b", "events" };
-				p = Runtime.getRuntime().exec(cmd2);
-				reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+				logProcess = Runtime.getRuntime().exec(cmd2);
+				logReader = new BufferedReader(new InputStreamReader(logProcess.getInputStream()));
 				PerApp.log("reading");
-				
+
 				String line;
 				Pattern pattern = Pattern.compile
-					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,([^/]*).*\\]");  
-				
-				while (null != (line = reader.readLine())) {
+					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,([^/]*).*\\]");
+
+				while (null != (line = logReader.readLine())) {
 					Matcher m = pattern.matcher(line);
-					if (m.find()) {
-						activityResume(m.group(2));
+					if (m.find()) {						
+						app = m.group(2);
+						if (marker == null)
+							activityResume(app);
+						else
+							PerApp.log("Waiting for marker");
 					}
-					else {
-						if (line.contains("am_resume_activity") || line.contains("am_restart_activity"))
-							PerApp.log("Should have matched "+line);
+					else if (marker != null && line.contains(marker)) {
+						PerApp.log("Marker found");
+						marker = null;
+						if (app != null)
+							activityResume(app);
+						app = null;
 					}
 				}
-				
-				PerApp.log("logcat done?!");
-				reader.close();
+
+				logReader.close();
+				logReader = null;
 			}
 			catch(IOException e) {
 				PerApp.log("logcat: "+e);
-				if (p != null)
-					p.destroy();
+
+				if (logProcess != null)
+					logProcess.destroy();
 			}
-			
+
+            
+			if (interruptReader) {
+				PerApp.log("reader interrupted");
+			    return;
+			}
+
 			PerApp.log("logcat monitor died");
+			
 			try {
 				Thread.sleep(5000);
 			} catch (InterruptedException e) {
 			}
 		}
 	}
-	
+
 	@Override
 	public IBinder onBind(Intent arg0) {
 		return messenger.getBinder();
 	}
-	
+
+	protected void getSettings() {
+		settings = PerApp.getSettings(PerAppService.this, options);
+
+		for (Setting s: settings)
+			s.activate();
+	}
+
 	@Override
 	public void onCreate() {
 		PerApp.log("Creating service");
 		options = PreferenceManager.getDefaultSharedPreferences(this);
-		
-		settings = PerApp.getSettings(this, options);
+
+		getSettings();
 		
         wm = (WindowManager)getSystemService(WINDOW_SERVICE);        
         am = (AudioManager)getSystemService(AUDIO_SERVICE);
 
 		setBoost();
-	
+
 		ll = new LinearLayout(this);
         ll.setClickable(true);
         ll.setFocusable(false);
@@ -247,26 +275,29 @@ public class PerAppService extends Service implements OnTouchListener {
         ll.setVisibility(View.GONE);
         
 //        ll.setOnTouchListener(this);
-        
-        if (Options.getNotify(options) != Options.NOTIFY_NEVER) {
-        	
-			Notification n = new Notification(
-					R.drawable.brightnesson,
-					"PerApp", 
-					System.currentTimeMillis());
-			Intent i = new Intent(this, PerApp.class);
-			i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-			n.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT; 
-			n.setLatestEventInfo(this, "PerApp", "PerApp is on", 
-					PendingIntent.getActivity(this, 0, i, 0));
-			PerApp.log("notify from service "+n.toString());
-	
-			startForeground(PerApp.NOTIFICATION_ID, n);
-        }
+
+        int icon = R.drawable.brightnesson;
 		
-		Runnable logRunnable = new Runnable(){
-			@Override
-			public void run() {
+        if (Options.getNotify(options) == Options.NOTIFY_NEVER)
+			icon = 0;
+
+        Notification n = new Notification(
+        		icon,
+        		"PerApp", 
+        		System.currentTimeMillis());
+        Intent i = new Intent(this, PerApp.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        n.flags = Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT;
+        n.setLatestEventInfo(this, "PerApp", "PerApp is on", 
+        		PendingIntent.getActivity(this, 0, i, 0));
+        PerApp.log("notify from service "+n.toString());
+
+        startForeground(PerApp.NOTIFICATION_ID, n);
+
+        Runnable logRunnable = new Runnable(){
+        	@Override
+        	public void run() {
+                interruptReader = false;
 				monitorLog();
 			}};  
 		logThread = new Thread(logRunnable);
@@ -291,8 +322,16 @@ public class PerAppService extends Service implements OnTouchListener {
 			ll = null;
 		}
 		if (logThread != null) {
-			logThread.stop();
-			logThread = null;
+			interruptReader = true;
+			try {
+				if (logProcess != null) {
+					PerApp.log("Destroying service, killing reader");
+					logProcess.destroy();
+				}
+//				logThread = null;
+			}
+			catch (Exception e) {
+			}  
 		}
 		PerApp.log("Destroying service, destroying notification =" + (Options.getNotify(options) != Options.NOTIFY_ALWAYS));
 		stopForeground(Options.getNotify(options) != Options.NOTIFY_ALWAYS);
@@ -359,7 +398,7 @@ public class PerAppService extends Service implements OnTouchListener {
 				PerApp.log("B:"+height+" "+y+" "+startY+" "+0+" "+startVolume);
 				newVolume = (int)interpolate(height, y, startY, 0, startVolume);
 			}
-			
+
 			if (newVolume < 0)
 				newVolume = 0;
 			else if (maxVolume < newVolume)

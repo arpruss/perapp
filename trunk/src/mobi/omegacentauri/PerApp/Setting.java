@@ -23,19 +23,28 @@ public abstract class Setting {
 	protected String id;
 	protected String name;
 	protected int intValue;
-	protected String defaultValue; 
+	protected String defaultValue;
+	protected int defaultMode = DEFAULT;
 	private SharedPreferences pref;
 	private static final int SKIP = 0;
 	private static final int DEFAULT = 1;
 	private static final int SET = 2;
+	private static final int REMEMBER_PER_APP = 3;
+	private static final int GLOBAL = 3;
 	private Spinner spin;
 	protected Context context;
 	
-	public static final String modes[] = { "Keep previous", "Defaults", "Customize" };
+	public static final String modes[] = { "Ignore launch", "Defaults", "Customize" };
+	public static final int modeIds[] = { SKIP, DEFAULT, SET };
+	public static final String modesRemembered[] = { "Ignore launch", "Remember", "Global" };
+	public static final int modesRememberedIds[] = { SKIP, REMEMBER_PER_APP, GLOBAL };
 	
 	public Setting(Context context, SharedPreferences pref) {
 		this.context = context;
 		this.pref = pref;
+	}
+	
+	public void activate() {		
 	}
 	
 	public boolean isSupported() {
@@ -146,6 +155,11 @@ public abstract class Setting {
 	}
 	
 	protected View getDialogView(Activity activity, Builder builder, int id, final String app) {
+		return getDialogView(activity, builder, id, app, modes, modeIds);
+	}
+	
+	protected View getDialogView(Activity activity, Builder builder, int id, final String app,
+			String[] modeNames, final int[] modeIds) {
 		load(app);
 
 		builder.setTitle(name);
@@ -156,7 +170,7 @@ public abstract class Setting {
 		spin = (Spinner)v.findViewById(R.id.mode_spinner);
 		ArrayAdapter<String> aa = new ArrayAdapter<String>(activity, 
 				android.R.layout.simple_spinner_item,
-				Setting.modes);
+				modeNames);
 		aa.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		spin.setAdapter(aa);
 		spin.setSelection(getMode(app));
@@ -165,7 +179,7 @@ public abstract class Setting {
 			@Override
 			public void onItemSelected(AdapterView<?> arg0, View arg1,
 					int mode, long arg3) {
-				setMode(app, mode);
+				setMode(app, modeIds[mode]);
 			}
 
 			@Override
