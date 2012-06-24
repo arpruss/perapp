@@ -228,4 +228,7 @@ public abstract class Setting {
 	protected String describeValue() {
 		return null;
 	}
+
+	protected void onDestroy() {
+	}
 }
