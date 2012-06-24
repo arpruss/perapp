@@ -349,19 +349,21 @@ public class PerApp extends Activity implements ServiceConnection {
 				
 		});
 
+		builder.setView(v);
+
+		dialog = builder.create();
+		dialog.show();		
+
 		list.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
 			public void onItemClick(AdapterView<?> parent, View v, int position,
 					long id) {
 				settings[position].dialog(PerApp.this, app);
+				dialog.dismiss();
 			}        	
         });
 		
-		builder.setView(v);
-
-		dialog = builder.create();
-		dialog.show();		
 	}
 	
 	@Override

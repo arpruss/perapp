@@ -321,6 +321,10 @@ public class PerAppService extends Service implements OnTouchListener {
 			wm.removeView(ll);
 			ll = null;
 		}
+		
+		for (Setting s: settings)
+			s.onDestroy();
+		
 		if (logThread != null) {
 			interruptReader = true;
 			try {

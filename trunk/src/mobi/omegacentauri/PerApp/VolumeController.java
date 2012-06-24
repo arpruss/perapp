@@ -55,8 +55,21 @@ public class VolumeController {
 		if (extraDB > 0) {
 			if (maxStreamVolume < v) {
 				try {
-					for (short i=0; i<bands; i++)
-						eq.setBandLevel(i, (short)(v-maxStreamVolume));
+					for (short i=0; i<bands; i++) {
+						short adj = (short)(v-maxStreamVolume);
+
+						if (true) {
+							int hz = eq.getCenterFreq((short)i)/1000;
+							if (hz < 150)
+								adj = 0;
+							else if (hz < 250)
+								adj = (short)(adj/2);
+							else if (hz > 8000)
+								adj = (short)(3*(int)adj/4);
+						}
+						
+						eq.setBandLevel(i, adj);
+					}
 				}
 				catch(UnsupportedOperationException e) {
 					Log.e("PerApp", e.toString());
@@ -73,21 +86,32 @@ public class VolumeController {
 	public int getVolume() {
 		int volume = 100*am.getStreamVolume(AudioManager.STREAM_MUSIC);
 		
+		PerApp.log("base volume = "+volume);
+
 		if (extraDB == 0)
 			return volume;
-		
+
 		try {
 			float total = 0;
-			
-			for (short i=0; i<bands; i++)
-				total += eq.getBandLevel(i);
-	
-			volume += (int)(total/bands+.5f);
+			int count = 0;
+
+			for (short i=0; i<bands; i++) {
+				int hz = eq.getCenterFreq((short)i)/1000;
+				if (250 <= hz && hz <= 8000) {
+					total += eq.getBandLevel(i);
+					count++;
+					PerApp.log(""+i+" "+eq.getBandLevel(i));
+				}
+			}
+
+			if (0<count)
+				volume += (int)(total/count+.5f);
 		}
 		catch (UnsupportedOperationException e) {
-			Log.e("PerApp", e.toString());			
+			Log.e("VolumeSwipe", e.toString());			
 		}
-		
+
+		PerApp.log("total volume = "+volume);
 		return volume;
 	}
 	

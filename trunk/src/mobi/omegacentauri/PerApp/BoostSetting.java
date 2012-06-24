@@ -99,17 +99,17 @@ public class BoostSetting extends Setting {
 	
 	@Override
 	protected void set() {
-		if (intValue == 0) {
-			if (eq != null)
-				eq.setEnabled(false);
-			return;
-		}
-		
-		try {
-			if (eq == null)
-				eq = new Equalizer(0,0);				
+		if (eq == null)
+			eq = new Equalizer(0,0);				
 
-			PerApp.log("max boost "+eq.getBandLevelRange()[1]);
+		try {
+			if (intValue == 0) {
+				PerApp.log("turn off boost");
+				eq.setEnabled(false);
+				return;
+			}
+			
+			PerApp.log("max boost "+eq.getBandLevelRange()[1]+ " actual boost "+(intValue*100));
 			if (intValue > eq.getBandLevelRange()[1]/100)
 				intValue = eq.getBandLevelRange()[1]/100;
 			if (intValue > MAX_BOOST)
@@ -143,5 +143,13 @@ public class BoostSetting extends Setting {
 	@Override
 	protected String describeValue() {
 		return ""+intValue;
+	}
+	
+	@Override
+	protected void onDestroy() {
+		if (eq != null) {
+			eq.setEnabled(false);
+			eq = null;
+		}
 	}
 }
