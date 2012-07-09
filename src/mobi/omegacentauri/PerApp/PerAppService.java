@@ -168,13 +168,14 @@ public class PerAppService extends Service implements OnTouchListener {
 			logProcess = null;
 			
 			String marker = "mobi.omegacentauri.PerApp:marker:"+System.currentTimeMillis()+":"+x.nextLong()+":";
-			EventLog.writeEvent(1, marker);
+			EventLog.writeEvent(12345, marker);
 			String app = null;
 
 			try {
 				PerApp.log("logcat monitor starting");
 //				Log.v("PerApp", marker);
-				String[] cmd2 = { "logcat", "-b", "events" };
+				String[] cmd2 = { "logcat", "-b", "events", "[12345]:I", 
+						"am_resume_activity:I", "am_restart_activity:I" };
 				logProcess = Runtime.getRuntime().exec(cmd2);
 				logReader = new BufferedReader(new InputStreamReader(logProcess.getInputStream()));
 				PerApp.log("reading");
@@ -184,6 +185,8 @@ public class PerAppService extends Service implements OnTouchListener {
 					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,([^/]*).*\\]");
 
 				while (null != (line = logReader.readLine())) {
+					if (interruptReader)
+						break;
 					Matcher m = pattern.matcher(line);
 					if (m.find()) {						
 						app = m.group(2);
