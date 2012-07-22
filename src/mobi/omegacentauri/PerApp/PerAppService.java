@@ -42,12 +42,12 @@ import android.widget.LinearLayout;
 public class PerAppService extends Service implements SensorEventListener {
 	private final IncomingHandler incomingHandler = new IncomingHandler();
 	private final Messenger messenger = new Messenger(incomingHandler);
-	private LinearLayout ll = null;
+	private LinearLayout orientationChanger = null;
+	protected WindowManager.LayoutParams orientationLayout;
 	private WindowManager wm;
 	private PackageManager pm;
 	private SensorManager sm;
 	private AudioManager am;
-	protected WindowManager.LayoutParams lp;
 	private SharedPreferences options;
 	private VolumeController vc;
 	private static final int windowType = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT; // PHONE, ALERT, DIALOG, OVERLAY, ERROR
@@ -58,7 +58,7 @@ public class PerAppService extends Service implements SensorEventListener {
 	private float[] gravity = { 0f, 0f, 0f };
 	private int requestedOrientation = -1;
 	private ScreenReceiver screenReceiver = null;
-	private boolean hardOrientation = false;
+	private boolean activeHardOrientation = false;
 	private boolean optionalHardOrientation = true;
 	public boolean screenOn = true;
 
@@ -79,19 +79,19 @@ public class PerAppService extends Service implements SensorEventListener {
 				PerAppService.this.getSettings();
 				break;
 			case MSG_ON:
-				if (ll != null) {
-					ll.setVisibility(View.VISIBLE);
+				if (orientationChanger != null) {
+					orientationChanger.setVisibility(View.VISIBLE);
 				}
 				break;
 			case MSG_OFF:
-			if (ll != null) {
-				ll.setVisibility(View.GONE);
+			if (orientationChanger != null) {
+				orientationChanger.setVisibility(View.GONE);
 			}
 			break;
 			case MSG_ADJUST:
-				if (ll != null) {
+				if (orientationChanger != null) {
 					adjustParams();
-					wm.updateViewLayout(ll, lp);
+					wm.updateViewLayout(orientationChanger, orientationLayout);
 				}
 				break;
 			case MSG_BOOST:
@@ -101,12 +101,12 @@ public class PerAppService extends Service implements SensorEventListener {
 				}
 				break;
 			case MSG_SET_HARD_ORIENTATION:
-				hardOrientation = true;
-				setHardOrientation();
+				activeHardOrientation = true;
+				setHardOrientation(true);
 				break;
 			case MSG_CLOSE_HARD_ORIENTATION:
-				hardOrientation = false;
-				pauseHardOrientation(true);
+				activeHardOrientation = false;
+				orientationChanger.setVisibility(View.GONE);
 				break;
 			default:
 				super.handleMessage(m);
@@ -134,8 +134,10 @@ public class PerAppService extends Service implements SensorEventListener {
 		try {
 			info = pm.getActivityInfo(ComponentName.unflattenFromString(activity), 0);
 		} catch (NameNotFoundException e) {
-			hardOrientation = false;
-			pauseHardOrientation(true);
+			try {
+				messenger.send(Message.obtain(null, incomingHandler.MSG_CLOSE_HARD_ORIENTATION, 0,0));
+			} catch (RemoteException e1) {
+			}
 			return;
 		}
 		
@@ -181,7 +183,6 @@ public class PerAppService extends Service implements SensorEventListener {
 
 			try {
 				PerApp.log("logcat monitor starting");
-//				Log.v("PerApp", marker);
 				String[] cmd2 = { "logcat", "-b", "events", "[12345]:I", 
 						"am_resume_activity:I", "am_restart_activity:I", "*:S" };
 				logProcess = Runtime.getRuntime().exec(cmd2);
@@ -264,13 +265,13 @@ public class PerAppService extends Service implements SensorEventListener {
 
         wm = (WindowManager)getSystemService(WINDOW_SERVICE);
     	
-		ll = new LinearLayout(this);
-        ll.setClickable(false);
-        ll.setFocusable(false);
-        ll.setFocusableInTouchMode(false);
-        ll.setLongClickable(false);
+		orientationChanger = new LinearLayout(this);
+        orientationChanger.setClickable(false);
+        orientationChanger.setFocusable(false);
+        orientationChanger.setFocusableInTouchMode(false);
+        orientationChanger.setLongClickable(false);
 		
-        lp = new WindowManager.LayoutParams(
+        orientationLayout = new WindowManager.LayoutParams(
         	WindowManager.LayoutParams.WRAP_CONTENT,
         	WindowManager.LayoutParams.WRAP_CONTENT,
         	windowType,
@@ -280,8 +281,8 @@ public class PerAppService extends Service implements SensorEventListener {
                 
         adjustParams();
         
-        wm.addView(ll, lp);
-        ll.setVisibility(View.GONE);
+        wm.addView(orientationChanger, orientationLayout);
+        orientationChanger.setVisibility(View.GONE);
         
         int icon = R.drawable.brightnesson;
 		
@@ -321,39 +322,43 @@ public class PerAppService extends Service implements SensorEventListener {
     	screenOn = true;
     	
 		optionalHardOrientation = options.getBoolean(Options.PREF_HARD_ORIENTATION, false);
+		
+		if (optionalHardOrientation)
+			setHardOrientation(false);
 	}
 	
 	private void pauseHardOrientation(boolean stop) {
-		hardOrientation = false;
-		
 		sm.unregisterListener(this);		
-		if (stop && ll != null)
-			ll.setVisibility(View.GONE);
+
+		if (stop && orientationChanger != null)
+			orientationChanger.setVisibility(View.GONE);
 	}
 	
-	private void setHardOrientation() {
-		if (!hardOrientation || !screenOn)
+	private void setHardOrientation(boolean set) {
+		if (!optionalHardOrientation || !screenOn)
 			return;
+
+		if (requestedOrientation < 0) {
+			PerApp.log("orientation "+wm.getDefaultDisplay().getOrientation());
+			requestedOrientation = wm.getDefaultDisplay().getOrientation();
+		}
 		
-		lp.screenOrientation = wm.getDefaultDisplay().getOrientation();
-		wm.updateViewLayout(ll, lp);
-		ll.setVisibility(View.VISIBLE);
+		if (set) {
+			orientationLayout.screenOrientation = requestedOrientation;
+			wm.updateViewLayout(orientationChanger, orientationLayout);
+			orientationChanger.setVisibility(View.VISIBLE);
+		}
 		
 		gravity[0] = 0f;
 		gravity[1] = 0f;
 		gravity[2] = 0f;
 		
-//		ll.setVisibility(View.GONE);
-//		wm.updateViewLayout(ll, lp);
-
 		sm.registerListener(this, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
 				SensorManager.SENSOR_DELAY_NORMAL);
-		
-    	hardOrientation = true;
 	}
 	
 	private void adjustParams() {
-//        lp.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT; 
+//        orientationLayout.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT; 
 	}
 	
 	@Override
@@ -365,9 +370,9 @@ public class PerAppService extends Service implements SensorEventListener {
 		
 		pauseHardOrientation(true);
 		
-		if (ll != null) {
-			wm.removeView(ll);
-			ll = null;
+		if (orientationChanger != null) {
+			wm.removeView(orientationChanger);
+			orientationChanger = null;
 		}
 		
 		for (Setting s: settings)
@@ -421,7 +426,7 @@ public class PerAppService extends Service implements SensorEventListener {
         	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
           }
           else if (Build.VERSION.SDK_INT >= 9 && sq1 >= 3*(sq0 + sq2) && gravity[1] < -4f) {
-        	  PerApp.log("hardOrientation + reverse_portrait + "+event.values[0]+" "+event.values[1]+" "+event.values[2]);
+        	  PerApp.log("activeHardOrientation + reverse_portrait + "+event.values[0]+" "+event.values[1]+" "+event.values[2]);
         	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT;
           }
           else if (sq0 >= 3*(sq1 + sq2) && gravity[0] > 4f ) {
@@ -431,13 +436,14 @@ public class PerAppService extends Service implements SensorEventListener {
         	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE;
           }
           
-          if (requestedOrientation >= 0 && ll != null && lp != null &&
-            	( lp.screenOrientation != requestedOrientation ||
-            			ll.getVisibility() == View.GONE)) {
+          if (requestedOrientation >= 0 && activeHardOrientation &&
+        		  orientationChanger != null && orientationLayout != null &&
+            	( orientationLayout.screenOrientation != requestedOrientation ||
+            			orientationChanger.getVisibility() == View.GONE)) {
         	  
-        	  lp.screenOrientation = requestedOrientation;
-			  wm.updateViewLayout(ll, lp);
-			  ll.setVisibility(View.VISIBLE);
+        	  orientationLayout.screenOrientation = requestedOrientation;
+			  wm.updateViewLayout(orientationChanger, orientationLayout);
+			  orientationChanger.setVisibility(View.VISIBLE);
           }
      }
 	
@@ -447,8 +453,8 @@ public class PerAppService extends Service implements SensorEventListener {
 			if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
 				PerApp.log("screen on");
 				screenOn = true;
-				if (hardOrientation) {
-					setHardOrientation();
+				if (optionalHardOrientation) {
+					setHardOrientation(false);
 				}
 			}
 			else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
