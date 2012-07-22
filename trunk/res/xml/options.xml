@@ -10,6 +10,10 @@
 <PreferenceCategory
     android:title="Adjustable settings">
 <CheckBoxPreference
+    android:title="Hard to change orientation" 
+    android:defaultValue="false"
+    android:key="hardOrientation"/>
+<CheckBoxPreference
     android:title="Orientation Lock" 
     android:defaultValue="true"
     android:key="OrientationSetting..active"/>

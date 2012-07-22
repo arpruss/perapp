@@ -2,26 +2,30 @@ package mobi.omegacentauri.PerApp;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import mobi.omegacentauri.PerApp.R;
-
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.graphics.Color;
+import android.content.pm.ActivityInfo;
+import android.content.pm.ComponentInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.PixelFormat;
-import android.graphics.RadialGradient;
-import android.graphics.Typeface;
-import android.location.Address;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
@@ -31,62 +35,38 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.util.EventLog;
-import android.util.Log;
-import android.util.TypedValue;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnFocusChangeListener;
-import android.view.Gravity;
-import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
-public class PerAppService extends Service implements OnTouchListener {
-	private int startVolume;
-	private float startY;
-	private Info info;
-
-	private boolean defaultHidden = true;
-	private static final int HEIGHT_DELTA_DP = 50;
-	private static final float BOOST = 0.4f;
-	private int height_delta;
-	private int[] widths = {30, 50, 80, 20};
-	private final Messenger messenger = new Messenger(new IncomingHandler());
+public class PerAppService extends Service implements SensorEventListener {
+	private final IncomingHandler incomingHandler = new IncomingHandler();
+	private final Messenger messenger = new Messenger(incomingHandler);
 	private LinearLayout ll = null;
 	private WindowManager wm;
+	private PackageManager pm;
+	private SensorManager sm;
 	private AudioManager am;
 	protected WindowManager.LayoutParams lp;
 	private SharedPreferences options;
-	private int height;
 	private VolumeController vc;
-	private float scale;
 	private static final int windowType = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT; // PHONE, ALERT, DIALOG, OVERLAY, ERROR
 	private Setting[] settings;
 	private Thread logThread = null;
-	private Runnable logRunnable;
 	private boolean interruptReader;
 	private Process logProcess;
+	private float[] gravity = { 0f, 0f, 0f };
+	private int requestedOrientation = -1;
+	private ScreenReceiver screenReceiver = null;
+	private boolean hardOrientation = false;
+	private boolean optionalHardOrientation = true;
+	public boolean screenOn = true;
 
-	private static final String[] intercept = {
-		"com.amazon.avod.client.activity.MediaPlayerActivity",
-		"com.netflix.mediaclient.PlayerActivityPlus",
-		"me.abitno.vplayer.VideoActivity",
-		"com.amazon.mp3.",
-		"mobi.omegacentauri.PerApp.PerApp",
-		"com.cooliris.media.MovieView",
-		"com.hulu.plus.activity.PlayerActivity",
-		"com.videon.android.mediaplayer.",
-		"de.stohelit.audiobookplayer.MainPlayer",
-		"de.stohelit.folderplayer.",
-	};
-	
 	public class IncomingHandler extends Handler {
 		public static final int MSG_OFF = 0;
 		public static final int MSG_ON = 1;
-		public static final int MSG_VISIBLE = 2;
-		public static final int MSG_HIDDEN = 3;
+		public static final int MSG_SET_HARD_ORIENTATION = 2;
+		public static final int MSG_CLOSE_HARD_ORIENTATION = 3;
 		public static final int MSG_ADJUST = 4;
 		public static final int MSG_BOOST = 5;
 		public static final int MSG_RELOAD_SETTINGS = 6;
@@ -108,18 +88,6 @@ public class PerAppService extends Service implements OnTouchListener {
 				ll.setVisibility(View.GONE);
 			}
 			break;
-			case MSG_HIDDEN:
-				if (ll != null) {
-					hide();
-					defaultHidden = true;
-				}
-				break;
-			case MSG_VISIBLE:
-				if (ll != null) {
-					show();
-					defaultHidden = false;
-				}
-				break;
 			case MSG_ADJUST:
 				if (ll != null) {
 					adjustParams();
@@ -132,6 +100,14 @@ public class PerAppService extends Service implements OnTouchListener {
 					setBoost();
 				}
 				break;
+			case MSG_SET_HARD_ORIENTATION:
+				hardOrientation = true;
+				setHardOrientation();
+				break;
+			case MSG_CLOSE_HARD_ORIENTATION:
+				hardOrientation = false;
+				pauseHardOrientation(true);
+				break;
 			default:
 				super.handleMessage(m);
 			}
@@ -139,19 +115,9 @@ public class PerAppService extends Service implements OnTouchListener {
 	}
 	
 	private void setBoost() {
-		vc = null; // new VolumeController(PerAppService.this, options.getBoolean(Options.PREF_BOOST, false) ? BOOST: 0f);
+		vc = null; //new VolumeController(PerAppService.this, options.getBoolean(Options.PREF_BOOST, false) ? BOOST: 0f);
 	}
 	
-	private boolean activeFor(String s) {
-		if (options.getBoolean(Options.PREF_ACTIVE_IN_ALL, false))
-			return true;
-		
-		for(String i: intercept) {
-			if (s.startsWith(i))
-				return true;
-		}
-		return false;
-	}
 
 	private void activityResume(String packageName) {
 		for (Setting s: settings) {
@@ -159,7 +125,42 @@ public class PerAppService extends Service implements OnTouchListener {
 			s.set(packageName);
 		}
 	}
+	
+	@SuppressWarnings("static-access")
+	private void setOptionalHardOrientation(String activity) {
+		PerApp.log("Activity: "+activity);
+		ActivityInfo info;
+		
+		try {
+			info = pm.getActivityInfo(ComponentName.unflattenFromString(activity), 0);
+		} catch (NameNotFoundException e) {
+			hardOrientation = false;
+			pauseHardOrientation(true);
+			return;
+		}
+		
+		if (info.screenOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR ||
+				info.screenOrientation == ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR ||
+				info.screenOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+			PerApp.log("hard orientation on");
+			try {
+				messenger.send(Message.obtain(null, incomingHandler.MSG_SET_HARD_ORIENTATION, 0,0));
+			} catch (RemoteException e) {
+				PerApp.log(""+e);
+			}
+			
+		}
+		else {
+			PerApp.log("hard orientation off "+info.screenOrientation);
+			try {
+				messenger.send(Message.obtain(null, incomingHandler.MSG_CLOSE_HARD_ORIENTATION, 0,0));
+			} catch (RemoteException e) {
+				PerApp.log(""+e);
+			}
+		}
+	}
 
+	@SuppressLint("NewApi")
 	private void monitorLog() {
 		Random x = new Random();
 		BufferedReader logReader;
@@ -167,33 +168,39 @@ public class PerAppService extends Service implements OnTouchListener {
 		for(;;) {
 			logProcess = null;
 			
-			String marker = "mobi.omegacentauri.PerApp:marker:"+System.currentTimeMillis()+":"+x.nextLong()+":";
-			EventLog.writeEvent(12345, marker);
+			String marker;
+			if (Build.VERSION.SDK_INT >= 8) {
+				marker = "mobi.omegacentauri.PerApp:marker:"+System.currentTimeMillis()+":"+x.nextLong()+":";
+				EventLog.writeEvent(12345, marker);
+			}
+			else {
+				// TODO: use clock
+				marker = null;
+			}
 			String app = null;
 
 			try {
 				PerApp.log("logcat monitor starting");
 //				Log.v("PerApp", marker);
 				String[] cmd2 = { "logcat", "-b", "events", "[12345]:I", 
-						"am_resume_activity:I", "am_restart_activity:I" };
+						"am_resume_activity:I", "am_restart_activity:I", "*:S" };
 				logProcess = Runtime.getRuntime().exec(cmd2);
 				logReader = new BufferedReader(new InputStreamReader(logProcess.getInputStream()));
 				PerApp.log("reading");
 
 				String line;
 				Pattern pattern = Pattern.compile
-					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,([^/]*).*\\]");
+					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,(([^/]*)/[^//,]*).*\\]");
 
 				while (null != (line = logReader.readLine())) {
 					if (interruptReader)
 						break;
 					Matcher m = pattern.matcher(line);
 					if (m.find()) {						
-						app = m.group(2);
-						if (marker == null)
-							activityResume(app);
-						else
-							PerApp.log("Waiting for marker");
+						if (marker == null) {
+							activityResume(m.group(3));						
+							setOptionalHardOrientation(m.group(2));
+						}
 					}
 					else if (marker != null && line.contains(marker)) {
 						PerApp.log("Marker found");
@@ -248,37 +255,34 @@ public class PerAppService extends Service implements OnTouchListener {
 
 		getSettings();
 		
+        sm = (SensorManager)getSystemService(SENSOR_SERVICE);        
         wm = (WindowManager)getSystemService(WINDOW_SERVICE);        
         am = (AudioManager)getSystemService(AUDIO_SERVICE);
+        pm = getPackageManager();
 
 		setBoost();
 
+        wm = (WindowManager)getSystemService(WINDOW_SERVICE);
+    	
 		ll = new LinearLayout(this);
-        ll.setClickable(true);
+        ll.setClickable(false);
         ll.setFocusable(false);
         ll.setFocusableInTouchMode(false);
         ll.setLongClickable(false);
-        ll.setOrientation(LinearLayout.HORIZONTAL);
-        
-        scale = getResources().getDisplayMetrics().density;
-        
-        height_delta = (int) (HEIGHT_DELTA_DP * scale);
 		
-        lp = new WindowManager.LayoutParams(        	
-        	50,
-        	WindowManager.LayoutParams.FILL_PARENT,
+        lp = new WindowManager.LayoutParams(
+        	WindowManager.LayoutParams.WRAP_CONTENT,
+        	WindowManager.LayoutParams.WRAP_CONTENT,
         	windowType,
          	WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
          	WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-         	PixelFormat.RGBA_8888);
-        
+         	PixelFormat.RGBA_8888);        
+                
         adjustParams();
         
         wm.addView(ll, lp);
         ll.setVisibility(View.GONE);
         
-//        ll.setOnTouchListener(this);
-
         int icon = R.drawable.brightnesson;
 		
         if (Options.getNotify(options) == Options.NOTIFY_NEVER)
@@ -308,18 +312,59 @@ public class PerAppService extends Service implements OnTouchListener {
 		logThread.start();
 		PerApp.log("Ready");
 		
-//		if (!defaultHidden)
-//			show();
-		hide();
+		screenReceiver = new ScreenReceiver();
+    	registerReceiver(screenReceiver, 
+    			new IntentFilter(Intent.ACTION_SCREEN_ON));    	
+    	registerReceiver(screenReceiver, 
+    			new IntentFilter(Intent.ACTION_SCREEN_OFF));
+    	
+    	screenOn = true;
+    	
+		optionalHardOrientation = options.getBoolean(Options.PREF_HARD_ORIENTATION, false);
+	}
+	
+	private void pauseHardOrientation(boolean stop) {
+		hardOrientation = false;
+		
+		sm.unregisterListener(this);		
+		if (stop && ll != null)
+			ll.setVisibility(View.GONE);
+	}
+	
+	private void setHardOrientation() {
+		if (!hardOrientation || !screenOn)
+			return;
+		
+		lp.screenOrientation = wm.getDefaultDisplay().getOrientation();
+		wm.updateViewLayout(ll, lp);
+		ll.setVisibility(View.VISIBLE);
+		
+		gravity[0] = 0f;
+		gravity[1] = 0f;
+		gravity[2] = 0f;
+		
+//		ll.setVisibility(View.GONE);
+//		wm.updateViewLayout(ll, lp);
+
+		sm.registerListener(this, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+				SensorManager.SENSOR_DELAY_NORMAL);
+		
+    	hardOrientation = true;
 	}
 	
 	private void adjustParams() {
-        lp.gravity = options.getBoolean(Options.PREF_LEFT, true) ? Gravity.LEFT : Gravity.RIGHT;
-        lp.width = (int) (widths[options.getInt(Options.PREF_WIDTH, Options.OPT_MEDIUM)] * getResources().getDisplayMetrics().density);
+//        lp.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT; 
 	}
 	
 	@Override
 	public void onDestroy() {
+		if (screenReceiver != null) {
+			unregisterReceiver(screenReceiver);
+			screenReceiver = null;
+		}
+		
+		pauseHardOrientation(true);
+		
 		if (ll != null) {
 			wm.removeView(ll);
 			ll = null;
@@ -340,6 +385,7 @@ public class PerAppService extends Service implements OnTouchListener {
 			catch (Exception e) {
 			}  
 		}
+		
 		PerApp.log("Destroying service, destroying notification =" + (Options.getNotify(options) != Options.NOTIFY_ALWAYS));
 		stopForeground(Options.getNotify(options) != Options.NOTIFY_ALWAYS);
 	}
@@ -354,128 +400,63 @@ public class PerAppService extends Service implements OnTouchListener {
 		return START_STICKY;
 	}
 
-	private void show() {
-		if (ll != null)
-			ll.setBackgroundColor(Color.argb(64,128,128,128));		
-	}
-	
-	private void hide() {
-		if (ll != null)
-			ll.setBackgroundColor(Color.argb(0,0,0,0));		
-	}
-	
-	private float interpolate(float x0, float x1, float x2, float y0, float y2) {
-		if (x2 == x0)
-			return (y0+y2)/2;
-		return (x1-x0)/(x2-x0)*(y2-y0)+y0;
-	}
-
 	@Override
-	public boolean onTouch(View v, MotionEvent event) {
-		if (event.getAction() == MotionEvent.ACTION_DOWN) {
-			startVolume = vc.getVolume();
-
-			info = new Info();
-			
-			startY = event.getY() - height_delta;
-			height = ll.getHeight() - height_delta;
-			if (startY < 0)
-				startY = 0;
-			if (height < startY)
-				startY = height;
-			show();
-			return true;
-		}
-		else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-			int newVolume;
-
-			float y = event.getY() - height_delta;
-			if (y <0)
-				y = 0;
-			if (height < y)
-				y = height;
-			
-			int maxVolume = vc.getMaxVolume();
-			
-			if (startY * startVolume < (height-startY)*(maxVolume-startVolume)) {
-				PerApp.log("A:"+startY+" "+y+" 0 "+startVolume+" "+maxVolume);
-				newVolume = (int)interpolate(startY, y, 0, startVolume, maxVolume);
-			}
-			else {
-				PerApp.log("B:"+height+" "+y+" "+startY+" "+0+" "+startVolume);
-				newVolume = (int)interpolate(height, y, startY, 0, startVolume);
-			}
-
-			if (newVolume < 0)
-				newVolume = 0;
-			else if (maxVolume < newVolume)
-				newVolume = maxVolume;
-			
-			vc.setVolume(newVolume);
-			
-			info.move(event.getY(), vc.getPercent());
-			
-			return true;
-		}
-		else if (event.getAction() == MotionEvent.ACTION_UP) {
-			if (defaultHidden)
-				hide();
-			info.close();
-		}
-		return false;
+	public void onAccuracyChanged(Sensor arg0, int arg1) {
+		// TODO Auto-generated method stub
+		
 	}
 	
-	private class Info {
-		TextView tv;
-		WindowManager.LayoutParams lp;
-		
-		public Info() {
-			tv = new TextView(PerAppService.this);
-
-			lp = new WindowManager.LayoutParams(        	
-					WindowManager.LayoutParams.WRAP_CONTENT,
-	            	WindowManager.LayoutParams.WRAP_CONTENT,
-	            	WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-	             	WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
-	             	WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-	             	PixelFormat.RGBA_8888);
-			
-			lp.gravity = PerAppService.this.lp.gravity | Gravity.TOP;
-			
-			tv.setBackgroundColor(Color.argb(200, 128, 128, 128));
-			tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 36);
-			tv.setPadding((int)(PerAppService.this.scale*10), 
-					(int)(PerAppService.this.scale*10),
-					(int)(PerAppService.this.scale*10),
-					(int)(PerAppService.this.scale*10));
-
-			tv.setGravity(Gravity.CENTER_VERTICAL);			
-
-			lp.x = PerAppService.this.lp.width + (int) (40 * PerAppService.this.scale);
-			
-			tv.setVisibility(View.GONE);
-			
-			wm.addView(tv, lp);
-		}
-		
-		public void move(float y, int percent) {
-			tv.setText(""+percent+"%");
-			if (percent > 100) {
-				tv.setTextColor(Color.RED);
-				tv.setTypeface(null, Typeface.BOLD);
+	@Override
+	public void onSensorChanged(SensorEvent event)
+    {
+          gravity[0] = 0.8f * gravity[0] + 0.2f * event.values[0];
+          gravity[1] = 0.8f * gravity[1] + 0.2f * event.values[1];
+          gravity[2] = 0.8f * gravity[2] + 0.2f * event.values[2];
+          
+          float sq0 = gravity[0]*gravity[0];
+          float sq1 = gravity[1]*gravity[1];
+          float sq2 = gravity[2]*gravity[2];
+          
+          if (sq1 >= 3*(sq0 + sq2) && gravity[1] > 4f) {
+        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+          }
+          else if (Build.VERSION.SDK_INT >= 9 && sq1 >= 3*(sq0 + sq2) && gravity[1] < -4f) {
+        	  PerApp.log("hardOrientation + reverse_portrait + "+event.values[0]+" "+event.values[1]+" "+event.values[2]);
+        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT;
+          }
+          else if (sq0 >= 3*(sq1 + sq2) && gravity[0] > 4f ) {
+        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+          }
+          else if (Build.VERSION.SDK_INT >= 9 && sq0 >= 3*(sq1 + sq2) && gravity[0] < -4f ) {
+        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE;
+          }
+          
+          if (requestedOrientation >= 0 && ll != null && lp != null &&
+            	( lp.screenOrientation != requestedOrientation ||
+            			ll.getVisibility() == View.GONE)) {
+        	  
+        	  lp.screenOrientation = requestedOrientation;
+			  wm.updateViewLayout(ll, lp);
+			  ll.setVisibility(View.VISIBLE);
+          }
+     }
+	
+	 protected class ScreenReceiver extends BroadcastReceiver {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+				PerApp.log("screen on");
+				screenOn = true;
+				if (hardOrientation) {
+					setHardOrientation();
+				}
 			}
-			else {
-				tv.setTextColor(Color.WHITE);
-				tv.setTypeface(null, Typeface.NORMAL);
+			else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+				PerApp.log("screen off");
+				screenOn = false;
+				pauseHardOrientation(false);
 			}
-
-			lp.y = (int) y;
-			tv.setVisibility(View.VISIBLE);
-			wm.updateViewLayout(tv, lp);
 		}
-		
-		public void close() {
-			tv.setVisibility(View.GONE);
-		}
-	}
+		 
+	 }
 }
