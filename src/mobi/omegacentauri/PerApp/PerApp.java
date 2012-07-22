@@ -556,7 +556,6 @@ public class PerApp extends Activity implements ServiceConnection {
 		messenger = new Messenger(service);
 		try {
 			messenger.send(Message.obtain(null, IncomingHandler.MSG_RELOAD_SETTINGS, 0, 0));
-			messenger.send(Message.obtain(null, IncomingHandler.MSG_VISIBLE, 0, 0));
 		} catch (RemoteException e) {
 		} 
 	}

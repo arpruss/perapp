@@ -31,6 +31,7 @@ public class Options extends PreferenceActivity {
 	public static final String PREF_WIDTH = "width";
 	public static final String PREF_BOOST = "doBoost";
 	public static final String PREF_AD = "lastAd";
+	public static final String PREF_HARD_ORIENTATION = "hardOrientation";
 	
 	@Override
 	public void onCreate(Bundle icicle) {

@@ -149,6 +149,7 @@ public class BoostSetting extends Setting {
 	protected void onDestroy() {
 		if (eq != null) {
 			eq.setEnabled(false);
+			eq.release();
 			eq = null;
 		}
 	}
