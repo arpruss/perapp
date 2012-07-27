@@ -61,6 +61,13 @@ public class PerAppService extends Service implements SensorEventListener {
 	private boolean activeHardOrientation = false;
 	private boolean optionalHardOrientation = true;
 	public boolean screenOn = true;
+	private long lastSensorTime = Long.MIN_VALUE;
+	private static final long MAX_FILTER_DELTA_MS = 2000;
+	private static final float FILTER_CONSTANT_MS = 200;
+	private static final float HARD_ORIENTATION_ANGLE = 20;
+	private static final float HARD_ORIENTATION_COS_SQ
+	    = (float)(Math.cos(HARD_ORIENTATION_ANGLE * Math.PI / 180) *
+	    	Math.cos(HARD_ORIENTATION_ANGLE * Math.PI / 180));
 
 	public class IncomingHandler extends Handler {
 		public static final int MSG_OFF = 0;
@@ -414,26 +421,46 @@ public class PerAppService extends Service implements SensorEventListener {
 	@Override
 	public void onSensorChanged(SensorEvent event)
     {
-          gravity[0] = 0.8f * gravity[0] + 0.2f * event.values[0];
-          gravity[1] = 0.8f * gravity[1] + 0.2f * event.values[1];
-          gravity[2] = 0.8f * gravity[2] + 0.2f * event.values[2];
-          
+		  float alpha = 0.8f;
+		  
+		  long t = System.currentTimeMillis();
+		  long delta = t - lastSensorTime;
+		  
+		  if (t < lastSensorTime || lastSensorTime + MAX_FILTER_DELTA_MS < t) {
+			  gravity[0] = gravity[1] = gravity[2] = 0f;
+			  lastSensorTime = t;
+			  
+			  return;
+		  }
+
+		  alpha = delta / (FILTER_CONSTANT_MS + delta);
+		  gravity[0] = alpha * gravity[0] + (1-alpha) * event.values[0];
+		  gravity[1] = alpha * gravity[1] + (1-alpha) * event.values[1];
+		  gravity[2] = alpha * gravity[2] + (1-alpha) * event.values[2];
+		  		  
+		  lastSensorTime = t;
+		
           float sq0 = gravity[0]*gravity[0];
           float sq1 = gravity[1]*gravity[1];
           float sq2 = gravity[2]*gravity[2];
           
-          if (sq1 >= 3*(sq0 + sq2) && gravity[1] > 4f) {
-        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
-          }
-          else if (Build.VERSION.SDK_INT >= 9 && sq1 >= 3*(sq0 + sq2) && gravity[1] < -4f) {
-        	  PerApp.log("activeHardOrientation + reverse_portrait + "+event.values[0]+" "+event.values[1]+" "+event.values[2]);
-        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT;
-          }
-          else if (sq0 >= 3*(sq1 + sq2) && gravity[0] > 4f ) {
-        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
-          }
-          else if (Build.VERSION.SDK_INT >= 9 && sq0 >= 3*(sq1 + sq2) && gravity[0] < -4f ) {
-        	  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE;
+          float sumSq = sq0 + sq1 + sq2;
+          
+          if (sumSq >= 9f * 9f) {
+        	  float sumSqCosSq = sumSq * HARD_ORIENTATION_COS_SQ;
+        	  
+        	  if (sq1 >= sumSqCosSq) {
+        		  if (gravity[1] > 0f)
+        			  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+        		  else if (Build.VERSION.SDK_INT >= 9)
+        			  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT;
+        	  }
+        	  else if (sq0 >= sumSqCosSq) {
+        		  if (gravity[0] > 0f)
+        			  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+        		  else if (Build.VERSION.SDK_INT >= 9)
+        			  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE;        		  
+        	  }
           }
           
           if (requestedOrientation >= 0 && activeHardOrientation &&
