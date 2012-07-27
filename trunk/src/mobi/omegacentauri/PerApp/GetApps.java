@@ -125,7 +125,11 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 		appInfoAdapter.sort(MyApplicationInfo.LabelComparator);
 		listView.setAdapter(appInfoAdapter);
 		
-		progress.dismiss();
+		try {
+			progress.dismiss();
+		} 
+		catch (IllegalArgumentException e) {			
+		}
 //		listView.setVisibility(View.VISIBLE);
 	}
 }
