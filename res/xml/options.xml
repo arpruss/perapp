@@ -7,12 +7,12 @@
 	android:entryValues="@array/notifications"
 	android:key="notification"
 	android:defaultValue="1"/>
-<PreferenceCategory
-    android:title="Adjustable settings">
 <CheckBoxPreference
     android:title="Hard to change orientation" 
     android:defaultValue="false"
     android:key="hardOrientation"/>
+<PreferenceCategory
+    android:title="Adjustable settings">
 <CheckBoxPreference
     android:title="Orientation Lock" 
     android:defaultValue="true"
@@ -25,5 +25,13 @@
     android:title="Volume Boost" 
     android:defaultValue="true"
     android:key="BoostSetting..active"/>
+<CheckBoxPreference
+    android:title="Min CPU Speed [root]"
+    android:defaultValue="false"
+    android:key="MinCPUSetting..active"/>
+<CheckBoxPreference
+    android:title="Max CPU Speed [root]"
+    android:defaultValue="false"
+    android:key="MaxCPUSetting..active"/>
 </PreferenceCategory>
 </PreferenceScreen>

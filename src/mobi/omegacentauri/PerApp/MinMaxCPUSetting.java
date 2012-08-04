@@ -111,5 +111,9 @@ public class MinMaxCPUSetting extends Setting {
 		});
 
 		builder.create().show();
-	}	
+	}
+	
+	protected boolean defaultActive() {
+		return false;
+	}
 }
