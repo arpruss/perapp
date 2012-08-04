@@ -158,6 +158,9 @@ public abstract class Setting {
 		return getDialogView(activity, builder, id, app, modes, modeIds);
 	}
 	
+	protected void updateToDefault() {
+	}
+	
 	protected View getDialogView(Activity activity, Builder builder, int id, final String app,
 			String[] modeNames, final int[] modeIds) {
 		load(app);
@@ -180,6 +183,10 @@ public abstract class Setting {
 			public void onItemSelected(AdapterView<?> arg0, View arg1,
 					int mode, long arg3) {
 				setMode(app, modeIds[mode]);
+				if (mode == DEFAULT) {
+					parse(defaultValue); 
+					updateToDefault();
+				}
 			}
 
 			@Override
