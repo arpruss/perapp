@@ -197,8 +197,18 @@ public class PerAppService extends Service implements SensorEventListener {
 
 			try {
 				PerApp.log("logcat monitor starting");
-				String[] cmd2 = { "logcat", "-b", "events", "[12345]:I", 
-						"am_resume_activity:I", "am_restart_activity:I", "*:S" };
+				
+				String[] cmd2;
+				if (Build.VERSION.SDK_INT >= 16) {
+					cmd2 = new String[] { "su", "-c", "logcat", "-b", "events", "[12345]:I", 
+							"am_resume_activity:I", "am_restart_activity:I", "*:S" };					
+				}
+				else {
+					cmd2 = new String[] { "logcat", "-b", "events", "[12345]:I", 
+							"am_resume_activity:I", "am_restart_activity:I", "*:S" };
+					
+				}
+				
 				logProcess = Runtime.getRuntime().exec(cmd2);
 				logReader = new BufferedReader(new InputStreamReader(logProcess.getInputStream()));
 				PerApp.log("reading");

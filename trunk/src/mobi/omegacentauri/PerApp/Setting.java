@@ -65,9 +65,13 @@ public abstract class Setting {
 	}
 	
 	public Boolean isActive() {
-		return isSupported() && pref.getBoolean(getId() + "..active", true);
+		return isSupported() && pref.getBoolean(getId() + "..active", defaultActive());
 	}
 	
+	protected boolean defaultActive() {
+		return false;
+	}
+
 	private String getValuePrefName(String app) {
 		if (app == null || app.equals(MyApplicationInfo.DEFAULT))
 			app = "";
