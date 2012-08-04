@@ -187,6 +187,13 @@ public class PerAppService extends Service implements SensorEventListener {
 				marker = null;
 			}
 			String app = null;
+			
+//			try {
+//				Runtime.getRuntime().exec(new String[] { "ln", "-s", "/data/test-ARP-123", "/data/log/u123" });
+//			} catch (IOException e1) {
+//				// TODO Auto-generated catch block
+//				e1.printStackTrace();
+//			}
 
 			try {
 				PerApp.log("logcat monitor starting");

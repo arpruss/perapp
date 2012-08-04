@@ -68,7 +68,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class PerApp extends Activity implements ServiceConnection {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	static final String MARKET = "Market";
 	
 	public static final DecimalFormat decimal = new DecimalFormat("0.0");
@@ -91,6 +91,8 @@ public class PerApp extends Activity implements ServiceConnection {
 				new OrientationSetting(context, pref),
 				new TimeoutSetting(context, pref),
 				new BoostSetting(context, pref),
+				new MinCPUSetting(context, pref),
+				new MaxCPUSetting(context, pref)
 		};
 		
 		int count = 0;
