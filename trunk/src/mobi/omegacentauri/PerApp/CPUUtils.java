@@ -85,7 +85,7 @@ public class CPUUtils {
 
 	public static void writeValue(String filename, int value) {
 		File f = new File(DIR + filename);
-		if (!f.canWrite() && !rootMakeWriteable(filename)) {
+		if (!f.canWrite() && !rootMakeWriteable(DIR + filename)) {
 			PerApp.log("Error making "+filename+" writeable");
 			return;
 		}
