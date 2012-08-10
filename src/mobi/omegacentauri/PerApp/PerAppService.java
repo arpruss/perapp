@@ -387,6 +387,8 @@ public class PerAppService extends Service implements SensorEventListener {
 	
 	@Override
 	public void onDestroy() {
+		super.onDestroy();
+		
 		if (screenReceiver != null) {
 			unregisterReceiver(screenReceiver);
 			screenReceiver = null;

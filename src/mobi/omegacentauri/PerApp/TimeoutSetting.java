@@ -49,7 +49,7 @@ public class TimeoutSetting extends Setting {
 		return getPrintableValue(intValue);
 	}
 
-	public void dialog(Activity activity, final String app) {
+	public void dialog(PerApp activity, final String app) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
 		
 		View v = getDialogView(activity, builder, R.layout.timeout_setting, app);
