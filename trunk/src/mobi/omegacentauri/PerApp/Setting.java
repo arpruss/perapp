@@ -3,6 +3,8 @@ package mobi.omegacentauri.PerApp;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Map;
 
 import org.apache.http.client.utils.URIUtils;
 
@@ -12,11 +14,15 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.content.SharedPreferences;
 import android.provider.Settings.SettingNotFoundException;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 
 public abstract class Setting {
@@ -26,11 +32,11 @@ public abstract class Setting {
 	protected String defaultValue;
 	protected int defaultMode = DEFAULT;
 	private SharedPreferences pref;
-	private static final int SKIP = 0;
-	private static final int DEFAULT = 1;
-	private static final int SET = 2;
-	private static final int REMEMBER_PER_APP = 3;
-	private static final int GLOBAL = 3;
+	public static final int SKIP = 0;
+	public static final int DEFAULT = 1;
+	public static final int SET = 2;
+	public static final int REMEMBER_PER_APP = 3;
+	public static final int GLOBAL = 3;
 	private Spinner spin;
 	protected Context context;
 	
@@ -158,21 +164,43 @@ public abstract class Setting {
 		set();
 	}
 	
-	protected View getDialogView(Activity activity, Builder builder, int id, final String app) {
+	protected View getDialogView(PerApp activity, Builder builder, int id, final String app) {
 		return getDialogView(activity, builder, id, app, modes, modeIds);
 	}
 	
 	protected void updateToDefault() {
 	}
 	
-	protected View getDialogView(Activity activity, Builder builder, int id, final String app,
+	protected View getDialogView(final PerApp activity, Builder builder, int id, final String app,
 			String[] modeNames, final int[] modeIds) {
 		load(app);
+		
+		PerApp.log("getDialogView()");
 
 		builder.setTitle(name);
 		
+		builder.setOnCancelListener(new OnCancelListener(){
+
+			@Override
+			public void onCancel(DialogInterface dialog) {
+				((BaseAdapter)activity.appsList.getAdapter()).notifyDataSetChanged();
+			}});
+		
 		View v = View.inflate(activity, id, null);
 		builder.setView(v);
+		
+		Button allToDefaults = (Button)v.findViewById(R.id.all_to_default);
+		if (app.equals(MyApplicationInfo.DEFAULT)) {
+			allToDefaults.setVisibility(View.VISIBLE);
+			allToDefaults.setOnClickListener(new Button.OnClickListener(){
+
+				@Override
+				public void onClick(View arg0) {
+					setAllToDefaults();
+				}});
+		}
+		else
+			allToDefaults.setVisibility(View.GONE);
 		
 		spin = (Spinner)v.findViewById(R.id.mode_spinner);
 		ArrayAdapter<String> aa = new ArrayAdapter<String>(activity, 
@@ -201,7 +229,7 @@ public abstract class Setting {
 		return v;
 	}
 
-	public void dialog(Activity activity, String app) {				
+	public void dialog(PerApp activity, String app) {				
 	}
 	
 	protected void saveCustom(String app) {
@@ -241,5 +269,35 @@ public abstract class Setting {
 	}
 
 	protected void onDestroy() {
+	}
+
+	public String describeForList(String app) {
+		int mode = getMode(app);
+
+		if (mode == SET || mode == DEFAULT) {
+			load(app);
+			return name + ": " + describeValue(); 
+		}
+		else
+			return "";
+	}
+	
+	protected void setAllToDefaults() {
+		Map<String,?> allPrefs = pref.getAll();
+		ArrayList<String> toDelete = new ArrayList<String>();
+		String start1 = getId() + "..app..";
+		String start2 = getId() + "..mode..";
+		String notEnd = ".." + MyApplicationInfo.DEFAULT;
+		for (String option: allPrefs.keySet()) {
+			if ((option.startsWith(start1) ||
+					option.startsWith(start2)) &&
+					!option.endsWith(notEnd)) {
+				toDelete.add(option);
+			}
+		}
+		SharedPreferences.Editor ed = pref.edit();
+		for (String s: toDelete) 
+			ed.remove(s);
+		ed.commit();
 	}
 }

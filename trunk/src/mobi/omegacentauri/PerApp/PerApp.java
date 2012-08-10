@@ -19,6 +19,7 @@ import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -48,6 +49,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -71,8 +73,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	public static final boolean DEBUG = true;
 	static final String MARKET = "Market";
 	
-	public static final DecimalFormat decimal = new DecimalFormat("0.0");
-	
+	public static final DecimalFormat decimal = new DecimalFormat("0.0");	
 
 	private CheckBox activeBox;
 	private boolean active;
@@ -82,7 +83,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	private SharedPreferences options;
 	private NotificationManager notificationManager;
 	private boolean getOut = false;
-	private ListView appsList;
+	public ListView appsList;
 
 	static final int NOTIFICATION_ID = 1;
 	
@@ -116,36 +117,6 @@ public class PerApp extends Activity implements ServiceConnection {
 	public static void log(String s) {
 		if (DEBUG)
 			Log.v("PerApp", s);
-	}
-	
-	public void onNarrow(View v) {
-		options.edit().putInt(Options.PREF_WIDTH, Options.OPT_NARROW).commit();
-		sendMessage(IncomingHandler.MSG_ADJUST, 0, 0);
-	}
-	
-	public void onVNarrow(View v) {
-		options.edit().putInt(Options.PREF_WIDTH, Options.OPT_VNARROW).commit();
-		sendMessage(IncomingHandler.MSG_ADJUST, 0, 0);
-	}
-	
-	public void onMedium(View v) {
-		options.edit().putInt(Options.PREF_WIDTH, Options.OPT_MEDIUM).commit();
-		sendMessage(IncomingHandler.MSG_ADJUST, 0, 0);
-	}
-	
-	public void onWide(View v) {
-		options.edit().putInt(Options.PREF_WIDTH, Options.OPT_WIDE).commit();
-		sendMessage(IncomingHandler.MSG_ADJUST, 0, 0);
-	}
-	
-	public void onLeft(View v) {
-		options.edit().putBoolean(Options.PREF_LEFT, true).commit();
-		sendMessage(IncomingHandler.MSG_ADJUST, 0, 0);
-	}
-	
-	public void onRight(View v) {
-		options.edit().putBoolean(Options.PREF_LEFT, false).commit();		
-		sendMessage(IncomingHandler.MSG_ADJUST, 0, 0);
 	}
 	
 	public void contextMenuOnClick(View v) {
@@ -354,18 +325,19 @@ public class PerApp extends Activity implements ServiceConnection {
 		builder.setView(v);
 
 		dialog = builder.create();
-		dialog.show();		
-
+		dialog.show();
+		
 		list.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
 			public void onItemClick(AdapterView<?> parent, View v, int position,
 					long id) {
+
+				log("chose "+settings[position].name);
 				settings[position].dialog(PerApp.this, app);
 				dialog.dismiss();
 			}        	
         });
-		
 	}
 	
 	@Override
@@ -411,7 +383,7 @@ public class PerApp extends Activity implements ServiceConnection {
 			public void onItemClick(AdapterView<?> parent, View v, int position,
 					long id) {
 				MyApplicationInfo info = (MyApplicationInfo) appsList.getAdapter().getItem(position);
-				chooseSetting(info.packageName);
+				chooseSetting(info.packageName);				
 			}        	
         });
 		
@@ -470,7 +442,7 @@ public class PerApp extends Activity implements ServiceConnection {
 			return;
 		}
 		
-        (new GetApps(this, appsList)).execute();
+        (new GetApps(this, appsList, getSettings(this, options))).execute();
         
         if (active) {
 			restartService(true);

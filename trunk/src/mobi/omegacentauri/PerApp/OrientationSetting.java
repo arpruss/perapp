@@ -25,7 +25,9 @@ public class OrientationSetting extends Setting {
 		defaultValue = "0";
 	}
 	
-	public void dialog(Activity activity, final String app) {
+	@Override
+	public void dialog(PerApp activity, final String app) {
+		PerApp.log("dialog");
 		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
 		
 		View v = getDialogView(activity, builder, R.layout.orientation_setting, app); 

@@ -59,7 +59,7 @@ public class BoostSetting extends Setting {
 		return s; 
 	}
 	
-	public void dialog(Activity activity, final String app) {
+	public void dialog(PerApp activity, final String app) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
 		
 		View v = getDialogView(activity, builder, R.layout.boost_setting, app);

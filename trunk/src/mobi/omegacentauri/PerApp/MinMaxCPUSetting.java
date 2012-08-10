@@ -74,7 +74,7 @@ public class MinMaxCPUSetting extends Setting {
 	}
 	
 
-	public void dialog(Activity activity, final String app) {
+	public void dialog(PerApp activity, final String app) {
 		if (speeds == null)
 			return;
 		

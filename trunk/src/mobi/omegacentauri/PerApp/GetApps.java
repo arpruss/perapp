@@ -31,11 +31,13 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 	final PackageManager pm;
 	final Context	 context;
 	final ListView listView;
+	final Setting[] settings;
 	public final static String cachePath = "app_labels"; 
 	ProgressDialog progress;
 	
-	GetApps(Context c, ListView lv) {
+	GetApps(Context c, ListView lv, Setting[] settings) {
 		context = c;
+		this.settings = settings;
 		pm = context.getPackageManager();
 		listView = lv;
 	}
@@ -96,14 +98,14 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 		
 		ArrayAdapter<MyApplicationInfo> appInfoAdapter = 
 			new ArrayAdapter<MyApplicationInfo>(context, 
-					android.R.layout.simple_list_item_1, 
+					android.R.layout.simple_list_item_2, 
 					appInfo) {
 
 			public View getView(int position, View convertView, ViewGroup parent) {
 				View v;				
 				
 				if (convertView == null) {
-	                v = View.inflate(context, android.R.layout.simple_list_item_1, null);
+	                v = View.inflate(context, android.R.layout.simple_list_item_2, null);
 	            }
 				else {
 					v = convertView;
@@ -118,6 +120,17 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 				else {
 					tv.setTypeface(Typeface.DEFAULT);
 				}
+				tv = ((TextView)v.findViewById(android.R.id.text2));
+				String settingsInfo = "";
+				for (int i=0; i<settings.length; i++) {
+					if (a.packageName.equals(MyApplicationInfo.DEFAULT) ||
+						settings[i].getMode(a.packageName) == Setting.SET) {
+						if (settingsInfo.length() > 0)
+							settingsInfo += ", ";
+						settingsInfo += settings[i].describeForList(a.packageName);
+					}
+				}
+				tv.setText(settingsInfo);
 				return v;
 			}				
 		};

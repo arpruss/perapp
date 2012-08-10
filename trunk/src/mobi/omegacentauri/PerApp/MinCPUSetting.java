@@ -12,7 +12,7 @@ public class MinCPUSetting extends MinMaxCPUSetting {
 		defaultValue = ""+speeds[0];
 		min = true;
 
-		name = "Min CPU speed";
+		name = "Min CPU Speed";
 		id = "MinCPUSetting";
 	}
 
