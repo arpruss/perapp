@@ -193,6 +193,7 @@ public class PerApp extends Activity implements ServiceConnection {
 		stopService();
 		saveSettings();		
 		Intent i = new Intent(this, PerAppService.class);
+		log("restartService:starting service");
 		startService(i);
 		if (bind) {
 			bind();
@@ -204,6 +205,7 @@ public class PerApp extends Activity implements ServiceConnection {
 		ed.putBoolean(Options.PREF_ACTIVE, value);
 		ed.commit();
 		if (value) {
+			log("setActive:restartService");
 			restartService(bind);
 		}
 		else {
@@ -356,12 +358,12 @@ public class PerApp extends Activity implements ServiceConnection {
 		
 		active = options.getBoolean(Options.PREF_ACTIVE, false);
 
-		if (active) {			
-			restartService(true);
-		}
-		else {
-			stopService();
-		}
+//		if (active) {
+//			restartService(true);
+//		}
+//		else {
+//			stopService();
+//		}
 		
 		activeBox = (CheckBox)findViewById(R.id.active);
 		activeBox.setChecked(active);
@@ -445,8 +447,11 @@ public class PerApp extends Activity implements ServiceConnection {
         (new GetApps(this, appsList, getSettings(this, options))).execute();
         
         if (active) {
-			restartService(true);
-		}			
+        	restartService(true);
+        }
+        else {
+        	stopService();
+        }
 	}
 
 	@Override

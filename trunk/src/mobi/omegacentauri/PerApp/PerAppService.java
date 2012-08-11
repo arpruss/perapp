@@ -113,7 +113,8 @@ public class PerAppService extends Service implements SensorEventListener {
 				break;
 			case MSG_CLOSE_HARD_ORIENTATION:
 				activeHardOrientation = false;
-				orientationChanger.setVisibility(View.GONE);
+				if (orientationChanger != null)
+					orientationChanger.setVisibility(View.GONE);
 				break;
 			default:
 				super.handleMessage(m);
@@ -223,8 +224,9 @@ public class PerAppService extends Service implements SensorEventListener {
 					Matcher m = pattern.matcher(line);
 					if (m.find()) {						
 						if (marker == null) {
-							activityResume(m.group(3));						
-							setOptionalHardOrientation(m.group(2));
+							activityResume(m.group(3));
+							if (optionalHardOrientation)
+								setOptionalHardOrientation(m.group(2));
 						}
 					}
 					else if (marker != null && line.contains(marker)) {
@@ -241,11 +243,10 @@ public class PerAppService extends Service implements SensorEventListener {
 			}
 			catch(IOException e) {
 				PerApp.log("logcat: "+e);
-
-				if (logProcess != null)
-					logProcess.destroy();
 			}
 
+			if (logProcess != null)
+				logProcess.destroy();
             
 			if (interruptReader) {
 				PerApp.log("reader interrupted");
@@ -405,16 +406,15 @@ public class PerAppService extends Service implements SensorEventListener {
 			s.onDestroy();
 		
 		if (logThread != null) {
-			interruptReader = true;
 			try {
 				if (logProcess != null) {
-					PerApp.log("Destroying service, killing reader");
+					PerApp.log("Destroying service, killing reader "+logProcess);
 					logProcess.destroy();
 				}
-//				logThread = null;
 			}
 			catch (Exception e) {
 			}  
+			interruptReader = true;
 		}
 		
 		PerApp.log("Destroying service, destroying notification =" + (Options.getNotify(options) != Options.NOTIFY_ALWAYS));

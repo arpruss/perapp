@@ -87,7 +87,7 @@ public class MinMaxCPUSetting extends Setting {
 		bar = (SeekBar)v.findViewById(R.id.cpu);
 		bar.setMax(speeds.length - 1);
 		bar.setProgress(getIndexOfSpeed(intValue));
-		tv.setText(""+intValue);
+		tv.setText(""+describeValue(intValue));
 		
 		bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
 
