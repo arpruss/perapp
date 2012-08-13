@@ -1,13 +1,24 @@
 package mobi.omegacentauri.PerApp;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningTaskInfo;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -21,6 +32,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.ComponentInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.AssetManager;
 import android.graphics.PixelFormat;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -28,6 +40,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Build;
+import android.os.Build.VERSION;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -35,6 +48,7 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.util.EventLog;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
@@ -59,7 +73,6 @@ public class PerAppService extends Service implements SensorEventListener {
 	private int requestedOrientation = -1;
 	private ScreenReceiver screenReceiver = null;
 	private boolean activeHardOrientation = false;
-	private boolean optionalHardOrientation = true;
 	public boolean screenOn = true;
 	private long lastSensorTime = Long.MIN_VALUE;
 	private static final long MAX_FILTER_DELTA_MS = 2000;
@@ -68,6 +81,12 @@ public class PerAppService extends Service implements SensorEventListener {
 	private static final float HARD_ORIENTATION_COS_SQ
 	    = (float)(Math.cos(HARD_ORIENTATION_ANGLE * Math.PI / 180) *
 	    	Math.cos(HARD_ORIENTATION_ANGLE * Math.PI / 180));
+	private static int OUR_MARKER_NUMBER = 713273919;
+//	private static final String logcatCommandLine =
+//		"logcat -b events";
+	private static final String logcatCommandLine =
+		"logcat -b events ["+OUR_MARKER_NUMBER+"]:I am_resume_activity:I am_restart_activity:I *:S";
+	private static final int LOGCAT_IDENTIFYING_ARGS = 4;
 
 	public class IncomingHandler extends Handler {
 		public static final int MSG_OFF = 0;
@@ -77,6 +96,8 @@ public class PerAppService extends Service implements SensorEventListener {
 		public static final int MSG_ADJUST = 4;
 		public static final int MSG_BOOST = 5;
 		public static final int MSG_RELOAD_SETTINGS = 6;
+		public static final int MSG_FORCE_ORIENTATION = 7;
+		public static final int MSG_OS_ORIENTATION = 8;
 		
 		@Override 
 		public void handleMessage(Message m) {
@@ -112,6 +133,20 @@ public class PerAppService extends Service implements SensorEventListener {
 				setHardOrientation(true);
 				break;
 			case MSG_CLOSE_HARD_ORIENTATION:
+				activeHardOrientation = false;
+				if (orientationChanger != null)
+					orientationChanger.setVisibility(View.GONE);
+				break;
+			case MSG_FORCE_ORIENTATION:
+				pauseHardOrientation(false);
+				activeHardOrientation = false;
+				requestedOrientation = m.arg1;
+				orientationLayout.screenOrientation = requestedOrientation;
+				wm.updateViewLayout(orientationChanger, orientationLayout);
+				orientationChanger.setVisibility(View.VISIBLE);
+				break;
+			case MSG_OS_ORIENTATION:
+				pauseHardOrientation(true);
 				activeHardOrientation = false;
 				if (orientationChanger != null)
 					orientationChanger.setVisibility(View.GONE);
@@ -181,7 +216,8 @@ public class PerAppService extends Service implements SensorEventListener {
 			String marker;
 			if (Build.VERSION.SDK_INT >= 8) {
 				marker = "mobi.omegacentauri.PerApp:marker:"+System.currentTimeMillis()+":"+x.nextLong()+":";
-				EventLog.writeEvent(12345, marker);
+				EventLog.writeEvent(OUR_MARKER_NUMBER, marker);
+				PerApp.log("will look for "+marker);
 			}
 			else {
 				// TODO: use clock
@@ -199,37 +235,46 @@ public class PerAppService extends Service implements SensorEventListener {
 			try {
 				PerApp.log("logcat monitor starting");
 				
-				String[] cmd2;
+				
+				String cmd2;
 				if (Build.VERSION.SDK_INT >= 16) {
-					cmd2 = new String[] { "su", "-c", "logcat", "-b", "events", "[12345]:I", 
-							"am_resume_activity:I", "am_restart_activity:I", "*:S" };					
+					cmd2 = "su -c "+logcatCommandLine;
 				}
 				else {
-					cmd2 = new String[] { "logcat", "-b", "events", "[12345]:I", 
-							"am_resume_activity:I", "am_restart_activity:I", "*:S" };
+					cmd2 = logcatCommandLine;
 					
 				}
 				
-				logProcess = Runtime.getRuntime().exec(cmd2);
+//				String noorphan = installBlob("noorphan");
+//				
+//				if (noorphan == null) {
+//					PerApp.log("Cannot install noorphan");
+//					return;
+//				}
+
+				logProcess = Runtime.getRuntime().exec(
+						cmd2.split(" ")
+//						new String[] {
+//						noorphan,
+//						cmd2
+//						}
+						);
 				logReader = new BufferedReader(new InputStreamReader(logProcess.getInputStream()));
-				PerApp.log("reading");
 
 				String line;
 				Pattern pattern = Pattern.compile
 					("I/am_(resume|restart)_activity.*?:\\s+\\[.*,(([^/]*)/[^//,]*).*\\]");
 
+				PerApp.log("reading");
 				while (null != (line = logReader.readLine())) {
 					if (interruptReader)
 						break;
 					Matcher m = pattern.matcher(line);
-					if (m.find()) {						
-						if (marker == null) {
+					if (marker == null) {
+						if (m.find()) 						
 							activityResume(m.group(3));
-							if (optionalHardOrientation)
-								setOptionalHardOrientation(m.group(2));
-						}
 					}
-					else if (marker != null && line.contains(marker)) {
+					else if (line.contains(marker)) {
 						PerApp.log("Marker found");
 						marker = null;
 						if (app != null)
@@ -262,6 +307,56 @@ public class PerAppService extends Service implements SensorEventListener {
 		}
 	}
 
+	@SuppressLint({ "NewApi", "NewApi" })
+	private String installBlob(String blobName) {
+		File cacheDir = getCacheDir();
+		File blob = new File(cacheDir.getPath() + "/" + blobName);
+		File tmp = new File(blob.getPath() + ".tmp");
+		if (true || !blob.exists()) {
+			AssetManager assets = getAssets();
+			InputStream in = null;
+			FileOutputStream out = null;
+			try {
+				in = assets.open(blobName);
+				out = new FileOutputStream(tmp);
+				byte[] buffer = new byte[1024];
+				int s;
+				while(0<=(s = in.read(buffer))) {
+					out.write(buffer, 0, s);
+				}
+				out.close();
+				out = null;
+				in.close();
+				in = null;
+			} catch (IOException e) {
+				if (in != null)
+					try {
+						in.close();
+					} catch (IOException e1) {
+					}
+				if (out != null)
+					try {
+						out.close();
+					} catch (IOException e1) {
+					}
+				tmp.delete();
+				return null;
+			}
+			tmp.renameTo(blob);
+		}
+		if (VERSION.SDK_INT >= 9)
+			blob.setExecutable(true);
+		else
+			try {
+				Runtime.getRuntime().exec(new String[] { "chmod ", "755", blob.getPath() }).waitFor();
+			} catch (InterruptedException e) {
+			} catch (IOException e) {
+			}
+		
+		return blob.getPath();
+	}
+
+
 	@Override
 	public IBinder onBind(Intent arg0) {
 		return messenger.getBinder();
@@ -270,8 +365,10 @@ public class PerAppService extends Service implements SensorEventListener {
 	protected void getSettings() {
 		settings = PerApp.getSettings(PerAppService.this, options);
 
-		for (Setting s: settings)
+		for (Setting s: settings) {
 			s.activate();
+			s.setMessenger(messenger);
+		}
 	}
 
 	@Override
@@ -345,11 +442,8 @@ public class PerAppService extends Service implements SensorEventListener {
     			new IntentFilter(Intent.ACTION_SCREEN_OFF));
     	
     	screenOn = true;
-    	
-		optionalHardOrientation = options.getBoolean(Options.PREF_HARD_ORIENTATION, false);
-		
-		if (optionalHardOrientation)
-			setHardOrientation(false);
+
+//    	Setting.haveSetting(settings, OrientationSetting.ID);
 	}
 	
 	private void pauseHardOrientation(boolean stop) {
@@ -360,7 +454,7 @@ public class PerAppService extends Service implements SensorEventListener {
 	}
 	
 	private void setHardOrientation(boolean set) {
-		if (!optionalHardOrientation || !screenOn)
+		if (!screenOn)
 			return;
 
 		if (requestedOrientation < 0) {
@@ -499,7 +593,7 @@ public class PerAppService extends Service implements SensorEventListener {
 			if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
 				PerApp.log("screen on");
 				screenOn = true;
-				if (optionalHardOrientation) {
+				if (activeHardOrientation) {
 					setHardOrientation(false);
 				}
 			}

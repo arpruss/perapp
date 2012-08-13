@@ -17,6 +17,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
 import android.content.SharedPreferences;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.provider.Settings.SettingNotFoundException;
 import android.view.View;
 import android.widget.AdapterView;
@@ -26,7 +29,7 @@ import android.widget.Button;
 import android.widget.Spinner;
 
 public abstract class Setting {
-	protected String id;
+	public String id;
 	protected String name;
 	protected int intValue;
 	protected String defaultValue;
@@ -39,6 +42,7 @@ public abstract class Setting {
 	public static final int GLOBAL = 3;
 	private Spinner spin;
 	protected Context context;
+	private Messenger messenger = null;
 	
 	public static final String modes[] = { "Ignore launch", "Defaults", "Customize" };
 	public static final int modeIds[] = { SKIP, DEFAULT, SET };
@@ -299,5 +303,19 @@ public abstract class Setting {
 		for (String s: toDelete) 
 			ed.remove(s);
 		ed.commit();
+	}
+	
+	public void setMessenger(Messenger messenger) {
+		this.messenger = messenger;		
+	}
+	
+	protected boolean sendMessage(int message, int arg1, int arg2) {
+		try {
+			messenger.send(Message.obtain(null, message, arg1, arg2));
+			return true;
+		} catch (RemoteException e1) {
+			PerApp.log("sending message "+e1);
+			return false;
+		}		
 	}
 }

@@ -153,4 +153,9 @@ public class BoostSetting extends Setting {
 			eq = null;
 		}
 	}
+
+	@Override
+	protected boolean defaultActive() {
+		return true;
+	}
 }

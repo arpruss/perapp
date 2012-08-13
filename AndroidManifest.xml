@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      android:versionCode="11"
+      android:versionCode="13"
       android:smallScreens="true"
       android:normalScreens="true"
       android:largeScreens="true"
       android:anyDensity="true"
-      android:versionName="0.09" package="mobi.omegacentauri.PerApp">
+      android:versionName="0.11" package="mobi.omegacentauri.PerApp">
 
      <uses-sdk android:minSdkVersion="5" />
     
-    <application android:icon="@drawable/icon" android:label="PerApp"
+    <uses-permission android:name="android.permission.READ_LOGS"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+     
+     <application android:icon="@drawable/icon" android:label="PerApp"
     >
         <activity android:name="PerApp"
                   android:label="PerApp"
@@ -32,9 +37,5 @@
         </receiver> 
     </application>
      
-    <uses-permission android:name="android.permission.READ_LOGS"/>
-    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     
 </manifest>

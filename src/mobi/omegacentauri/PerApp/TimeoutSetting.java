@@ -93,4 +93,9 @@ public class TimeoutSetting extends Setting {
 		updateSystemSetting(cr, android.provider.Settings.System.SCREEN_OFF_TIMEOUT,				
 				intValue);
 	}
+
+	@Override
+	protected boolean defaultActive() {
+		return true;
+	}
 }
