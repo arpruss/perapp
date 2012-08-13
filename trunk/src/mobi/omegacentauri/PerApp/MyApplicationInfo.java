@@ -85,13 +85,16 @@ public class MyApplicationInfo {
 			label = component;
 		}
 		else {			
-			label = (String)l;
+			label = l.toString();
 			if (label.equals("Angry Birds")) {
-				if(packageName.startsWith("com.rovio.angrybirdsrio")) {
+				if(packageName.contains("angrybirdsrio")) {
 					label = label + " Rio";
 				}
-				else if (packageName.startsWith("com.rovio.angrybirdsseasons")) {
+				else if (packageName.contains("angrybirdsseasons")) {
 					label = label + " Seasons";
+				}
+				else if (packageName.contains("angrybirdsspace")) {
+					label = label + " Space";
 				}
 			}
 			if (cache != null)

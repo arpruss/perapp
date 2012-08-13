@@ -375,6 +375,13 @@ public class PerApp extends Activity implements ServiceConnection {
 					saveOS();
 				}
 				setActive(value, true);
+				
+				if (value) {
+					message("Important information",
+							"If you wish to uninstall or upgrade PerApp, uncheck the 'Active' "+
+							"button before uninstalling or upgrading, or some system resources "+
+							"will be wasted (they can be reclaimed by rebooting your device).");
+				}
 			}});
 		
         appsList = (ListView)findViewById(R.id.apps);

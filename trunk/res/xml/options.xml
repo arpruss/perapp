@@ -7,16 +7,12 @@
 	android:entryValues="@array/notifications"
 	android:key="notification"
 	android:defaultValue="1"/>
-<CheckBoxPreference
-    android:title="Hard to change orientation" 
-    android:defaultValue="false"
-    android:key="hardOrientation"/>
 <PreferenceCategory
     android:title="Adjustable settings">
 <CheckBoxPreference
-    android:title="Orientation Lock" 
+    android:title="Orientation" 
     android:defaultValue="true"
-    android:key="OrientationSetting..active"/>
+    android:key="OrientationSetting2..active"/>
 <CheckBoxPreference
     android:title="Screen Timeout" 
     android:defaultValue="true"
