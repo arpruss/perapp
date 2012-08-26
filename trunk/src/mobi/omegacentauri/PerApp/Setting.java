@@ -242,6 +242,13 @@ public abstract class Setting {
 		setMode(app, SET);
 	}
 	
+	protected void updateSystemSetting(ContentResolver cr, String s, String v) {
+		if (android.provider.Settings.System.getString(cr, s) == v)
+			return;
+		PerApp.log("setting "+s+" to "+v);
+		android.provider.Settings.System.putString(cr,s,v);
+	}
+
 	protected void updateSystemSetting(ContentResolver cr, String s, int v) {
 		try {
 			if (android.provider.Settings.System.getInt(cr, s) == v)

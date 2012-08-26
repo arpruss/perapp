@@ -89,6 +89,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	
 	public static Setting[] getSettings(Context context, SharedPreferences pref) {
 		Setting[] allSettings = new Setting[]{ 
+				new FontSize(context, pref),
 				new OrientationSetting(context, pref),
 				new TimeoutSetting(context, pref),
 				new BoostSetting(context, pref),

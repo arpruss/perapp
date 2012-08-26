@@ -68,7 +68,7 @@ public class PerAppService extends Service implements SensorEventListener {
 	private Setting[] settings;
 	private Thread logThread = null;
 	private boolean interruptReader;
-	private Process logProcess;
+	private Process logProcess = null;
 	private float[] gravity = { 0f, 0f, 0f };
 	private int requestedOrientation = -1;
 	private ScreenReceiver screenReceiver = null;
@@ -290,8 +290,10 @@ public class PerAppService extends Service implements SensorEventListener {
 				PerApp.log("logcat: "+e);
 			}
 
-			if (logProcess != null)
+			if (logProcess != null) {
 				logProcess.destroy();
+				logProcess = null;
+			}
             
 			if (interruptReader) {
 				PerApp.log("reader interrupted");
@@ -498,22 +500,33 @@ public class PerAppService extends Service implements SensorEventListener {
 		
 		for (Setting s: settings)
 			s.onDestroy();
-		
-		if (logThread != null) {
+
+		closeLogThread();
+		PerApp.log("Destroying service, destroying notification =" + (Options.getNotify(options) != Options.NOTIFY_ALWAYS));
+		stopForeground(Options.getNotify(options) != Options.NOTIFY_ALWAYS);
+	}
+	
+	private void closeLogThread() {
 			try {
 				if (logProcess != null) {
 					PerApp.log("Destroying service, killing reader "+logProcess);
 					logProcess.destroy();
+					logProcess = null;
 				}
 			}
 			catch (Exception e) {
 			}  
 			interruptReader = true;
-		}
-		
-		PerApp.log("Destroying service, destroying notification =" + (Options.getNotify(options) != Options.NOTIFY_ALWAYS));
-		stopForeground(Options.getNotify(options) != Options.NOTIFY_ALWAYS);
 	}
+	
+//	@Override
+//	protected void finalize() throws Throwable {
+//		try {
+//			closeLogThread();
+//		} finally {
+//			super.finalize();
+//		}
+//	}
 	
 	@Override
 	public void onStart(Intent intent, int flags) {
