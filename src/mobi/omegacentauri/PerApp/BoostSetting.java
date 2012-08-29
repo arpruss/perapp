@@ -109,6 +109,8 @@ public class BoostSetting extends Setting {
 				return;
 			}
 			
+			eq.setEnabled(true);
+			
 			PerApp.log("max boost "+eq.getBandLevelRange()[1]+ " actual boost "+(intValue*100));
 			if (intValue > eq.getBandLevelRange()[1]/100)
 				intValue = eq.getBandLevelRange()[1]/100;
@@ -132,8 +134,6 @@ public class BoostSetting extends Setting {
 				}
 				eq.setBandLevel((short)i, adj);
 			}
-			
-			eq.setEnabled(true);
 		}
 		catch (UnsupportedOperationException e) {
 			eq = null;
