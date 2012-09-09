@@ -209,6 +209,8 @@ public class PerAppService extends Service implements SensorEventListener {
 	private void monitorLog() {
 		Random x = new Random();
 		BufferedReader logReader;
+		
+		activityResume(getPackageName());
 
 		for(;;) {
 			logProcess = null;

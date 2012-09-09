@@ -17,6 +17,7 @@ public class Options extends PreferenceActivity {
 	public static final int NOTIFY_NEVER = 0;
 	public static final int NOTIFY_AUTO = 1;
 	public static final int NOTIFY_ALWAYS = 2;
+	public static final String PREF_START_ON_BOOT = "startOnBoot";
 	public static final String PREF_PREVIOUS_MODE = "previousMode";
 	public static final String PREF_TRIAL_START = "trialStarted_106b3";
 	public static final String PREF_FORCE_ON_WAKE = "forceOnWake";

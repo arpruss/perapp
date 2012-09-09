@@ -5,19 +5,51 @@
     android:layout_height="fill_parent"
     android:orientation="vertical" >
 
-    <CheckBox
-        android:id="@+id/active"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="PerApp Active"
-        android:textSize="24sp" />
+	<LinearLayout      
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal" >
+            <ToggleButton 
+                android:id="@+id/active"
+                android:layout_width="wrap_content"
+                android:layout_height="fill_parent"/>
 
-	<ListView
+	    <Button
+        android:id="@+id/choose"
+        android:layout_width="0dip"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:text="What to control"
+        android:onClick="onWhatToControl"
+        />
+    <Button
+        android:id="@+id/option"
+        android:layout_width="0dip"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:text="Settings"
+        android:onClick="onOptions"
+        />
+    <Button
+        android:id="@+id/other_apps"
+        android:layout_width="0dip"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:text="Other apps"
+        android:onClick="onOtherApps"
+        />
+    </LinearLayout>
+    
+		<ListView
 		android:id="@+id/apps"
 		android:fastScrollEnabled="true"
 		android:layout_width="fill_parent"
 		android:layout_height="0dip" 
 		android:layout_weight="1"
-	/>     
+	/>
 
 </LinearLayout>
