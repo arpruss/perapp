@@ -41,8 +41,6 @@ import android.text.InputType;
 import android.text.method.NumberKeyListener;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -68,6 +66,7 @@ import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 public class PerApp extends Activity implements ServiceConnection {
 	public static final boolean DEBUG = true;
@@ -75,7 +74,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	
 	public static final DecimalFormat decimal = new DecimalFormat("0.0");	
 
-	private CheckBox activeBox;
+	private ToggleButton activeBox;
 	private boolean active;
 
 	private Messenger messenger = null;
@@ -120,20 +119,6 @@ public class PerApp extends Activity implements ServiceConnection {
 			Log.v("PerApp", s);
 	}
 	
-	public void contextMenuOnClick(View v) {
-		v.showContextMenu();
-	}
-	
-	public void adOnClick(View v) {
-    	Intent i = new Intent(Intent.ACTION_VIEW);
-    	i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    	if (MARKET.contains("arket"))
-    		i.setData(Uri.parse("market://search?q=pub:\"Omega Centauri Software\""));
-    	else
-    		i.setData(Uri.parse("http://www.amazon.com/gp/mas/dl/android?p=mobi.omegacentauri.ScreenDim.Full&showAll=1"));            		
-    	startActivity(i);
-	}
-	
 	private void message(String title, String msg) {
 		AlertDialog alertDialog = new AlertDialog.Builder(this).create();
 
@@ -161,10 +146,6 @@ public class PerApp extends Activity implements ServiceConnection {
 		message("Welcome", msg);
 	}
 
-	public void menuButton(View v) {
-		openOptionsMenu();
-	}
-	
 	public void helpButton(View v) {
 		help();
 	}
@@ -346,6 +327,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		this.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
 		log("onCreate");
 		options = PreferenceManager.getDefaultSharedPreferences(this);
@@ -366,7 +348,7 @@ public class PerApp extends Activity implements ServiceConnection {
 //			stopService();
 //		}
 		
-		activeBox = (CheckBox)findViewById(R.id.active);
+		activeBox = (ToggleButton)findViewById(R.id.active);
 		activeBox.setChecked(active);
 		activeBox.setOnCheckedChangeListener(new OnCheckedChangeListener(){
 
@@ -489,26 +471,6 @@ public class PerApp extends Activity implements ServiceConnection {
 		log("onDestroy");
 	}
 
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch(item.getItemId()) {
-//		case R.id.change_log:
-//			changeLog();
-//			return true;
-//		case R.id.help:
-//			help();
-//			return true;
-//		case R.id.please_buy:
-//			new OtherApps(this, true);
-//			return true;
-		case R.id.options:
-			startActivity(new Intent(this, Options.class));			
-			return true;
-		default:
-			return false;
-		}
-	}
-	
 	private boolean largeScreen() {
 		int layout = getResources().getConfiguration().screenLayout;
 		return (layout & Configuration.SCREENLAYOUT_SIZE_MASK) == 
@@ -518,12 +480,26 @@ public class PerApp extends Activity implements ServiceConnection {
 	private boolean isKindle() {
 		return Build.MODEL.equalsIgnoreCase("Kindle Fire");
 	}
-
+	
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.main, menu);
-		
-		return true;
+	public boolean onKeyUp(int keyCode, KeyEvent event) {
+	    if (KeyEvent.KEYCODE_MENU == keyCode) {
+	    	onWhatToControl(null);
+	    	return true;
+	    }
+	    return false;
+	}
+	
+	public void onWhatToControl(View v) {
+		startActivity(new Intent(this, Options.class));
+	}
+
+	public void onOptions(View v) {
+		startActivity(new Intent(this, Options2.class));
+	}
+
+	public void onOtherApps(View v) {
+		MarketDetector.launch(this);
 	}
 
 	public void sendMessage(int n, int arg1, int arg2) {

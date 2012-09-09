@@ -12,7 +12,9 @@ public class OnBootReceiver extends BroadcastReceiver {
 	@Override
 	public void onReceive(Context context, Intent intent) {		
 		SharedPreferences options = PreferenceManager.getDefaultSharedPreferences(context);
-		if (options.getBoolean(Options.PREF_ACTIVE, false)) {
+		if (options.getBoolean(Options.PREF_ACTIVE, false) &&
+				options.getBoolean(Options.PREF_START_ON_BOOT, false)
+		) {
 			Intent i = new Intent(context, PerAppService.class);
 			context.startService(i);
 		}

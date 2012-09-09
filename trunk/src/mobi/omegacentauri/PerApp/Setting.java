@@ -40,6 +40,7 @@ public abstract class Setting {
 	public static final int SET = 2;
 	public static final int REMEMBER_PER_APP = 3;
 	public static final int GLOBAL = 3;
+	public static final int RESET = 4;
 	private Spinner spin;
 	protected Context context;
 	private Messenger messenger = null;
@@ -90,7 +91,12 @@ public abstract class Setting {
 	}
 	
 	protected int getMode(String app) {
-		return pref.getInt(getModePrefName(app), DEFAULT);
+		if (app.equals(context.getPackageName())) {
+			return RESET;
+		}
+		else {
+			return pref.getInt(getModePrefName(app), DEFAULT);
+		}
 	}
 	
 	protected void setMode(String app, int mode) {
@@ -151,15 +157,20 @@ public abstract class Setting {
 	}
 	
 	public void set(String app) {
-		int mode = pref.getInt(getModePrefName(app), DEFAULT);
+		int mode = getMode(app);
 		
 		PerApp.log("mode "+mode);
 
 		if (mode == SKIP) 
 			return;
-		
-		if (mode == SET)
+
+		if (mode == SET) {
 			load(app);
+		}
+		else if (mode == RESET) {
+			PerApp.log("resetting");
+			reset();
+		}
 		else {
 			PerApp.log("loading default");
 			load(null);
@@ -314,6 +325,10 @@ public abstract class Setting {
 	
 	public void setMessenger(Messenger messenger) {
 		this.messenger = messenger;		
+	}
+	
+	public void reset() {
+		decode(getDefaultValue());
 	}
 	
 	protected boolean sendMessage(int message, int arg1, int arg2) {

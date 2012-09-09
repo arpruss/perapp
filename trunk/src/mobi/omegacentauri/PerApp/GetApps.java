@@ -65,7 +65,8 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 			MyApplicationInfo myAppInfo;
 			myAppInfo = new MyApplicationInfo(
 					cache, pm, list.get(i));
-			myList.add(myAppInfo);
+			if (myAppInfo.packageName != context.getPackageName())
+				myList.add(myAppInfo);
 		}
 		cache.commit();
 		
