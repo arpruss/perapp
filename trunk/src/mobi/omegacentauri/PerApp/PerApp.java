@@ -487,7 +487,7 @@ public class PerApp extends Activity implements ServiceConnection {
 	    	onWhatToControl(null);
 	    	return true;
 	    }
-	    return false;
+	    return super.onKeyUp(keyCode, event);
 	}
 	
 	public void onWhatToControl(View v) {

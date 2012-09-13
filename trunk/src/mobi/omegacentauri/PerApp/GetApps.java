@@ -52,16 +52,31 @@ public class GetApps extends AsyncTask<Void, Integer, List<MyApplicationInfo>> {
 		
 		Intent launchIntent = new Intent(Intent.ACTION_MAIN);
 		launchIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-		
 		List<ResolveInfo> list = 
 			pm.queryIntentActivities(launchIntent, 0);
 		
+		launchIntent = new Intent(Intent.ACTION_MAIN);
+		launchIntent.addCategory(Intent.CATEGORY_HOME);
+		List<ResolveInfo> list2 = 
+			pm.queryIntentActivities(launchIntent, 0);
+		for (ResolveInfo r: list2) 
+			list.add(r);
+
 		List<MyApplicationInfo> myList = new ArrayList<MyApplicationInfo>();
 		
 		MyCache cache = new MyCache(MyCache.genFilename(context, cachePath));
 		
 		for (int i = 0 ; i < list.size() ; i++) {
+//			ResolveInfo r = list.get(i);
+//			int j;
+//			for (j = myList.size() - 1; 0 <= j; j--) 
+//				if (r.activityInfo.packageName.equals(myList.get(j).packageName))
+//					break;
+//			if (0<=j)
+//				continue;
+			
 			publishProgress(i, list.size());
+			
 			MyApplicationInfo myAppInfo;
 			myAppInfo = new MyApplicationInfo(
 					cache, pm, list.get(i));
