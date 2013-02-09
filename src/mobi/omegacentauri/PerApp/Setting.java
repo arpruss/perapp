@@ -44,6 +44,7 @@ public abstract class Setting {
 	private Spinner spin;
 	protected Context context;
 	private Messenger messenger = null;
+	private boolean didSet = false;
 	
 	public static final String modes[] = { "Ignore launch", "Defaults", "Customize" };
 	public static final int modeIds[] = { SKIP, DEFAULT, SET };
@@ -176,6 +177,7 @@ public abstract class Setting {
 			load(null);
 		}
 		
+		didSet = true;
 		set();
 	}
 	
@@ -339,5 +341,16 @@ public abstract class Setting {
 			PerApp.log("sending message "+e1);
 			return false;
 		}		
+	}
+	
+	protected void doSetAfter() {
+	
+	}
+
+	public void setAfter() {
+		if (didSet) {
+			didSet = false;
+			doSetAfter();
+		}
 	}
 }
