@@ -5,6 +5,14 @@
     android:title="Font size [some devices]"
     android:defaultValue="false"
     android:key="FontSizeSetting..active"/>
+<!-- <CheckBoxPreference
+    android:title="GPS [root]"
+    android:defaultValue="false"
+    android:key="GPSSetting..active"/>  -->
+<CheckBoxPreference
+    android:title="Input method [root]"
+    android:defaultValue="false"
+    android:key="IMESetting..active"/>
 <CheckBoxPreference
     android:title="Min CPU Speed [root]"
     android:defaultValue="false"

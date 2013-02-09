@@ -1,5 +1,6 @@
 package mobi.omegacentauri.PerApp;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -19,6 +20,7 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+@SuppressLint("NewApi")
 public class BoostSetting extends Setting {
 	private AudioManager am;
 	private Equalizer eq = null;

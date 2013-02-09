@@ -34,14 +34,9 @@ public class TimeoutSetting extends Setting {
 	}
 	
 	private String getPrintableValue(int ms) {
-		int halfMinutes = ms / 30000;
-		if (halfMinutes % 2 == 1) {
-			return ""+(halfMinutes/2)+":30";
-		}
-		else {
-			return ""+(halfMinutes/2)+":00";
-		}
-		
+		int minutes = ms / 60000;
+		int seconds = (ms / 1000) % 60;
+		return String.format("%d:%02d", minutes, seconds);
 	}
 	
 	@Override
@@ -57,7 +52,7 @@ public class TimeoutSetting extends Setting {
 		final TextView tv = (TextView)v.findViewById(R.id.timeout_value);
 
 		SeekBar bar = (SeekBar)v.findViewById(R.id.timeout);
-		bar.setProgress(intValue/30000-1);
+		bar.setProgress(intValue/10000-1);
 		tv.setText(getPrintableValue(intValue));
 		
 		bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
@@ -65,7 +60,7 @@ public class TimeoutSetting extends Setting {
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress,
 					boolean fromUser) {
-				TimeoutSetting.this.intValue = (progress+1) * 30000;
+				TimeoutSetting.this.intValue = (progress+1) * 10000;
 				tv.setText(getPrintableValue(TimeoutSetting.this.intValue));
 				
 				PerApp.log("Timeout set to "+TimeoutSetting.this.intValue);

@@ -164,7 +164,8 @@ public class PerAppService extends Service implements SensorEventListener {
 
 	private void activityResume(String packageName) {
 		for (Setting s: settings) {
-			PerApp.log("setting "+s.getName()+" for "+packageName);
+			s.setAfter();
+			PerApp.log("setting "+s.getName()+" for "+packageName);			
 			s.set(packageName);
 		}
 	}

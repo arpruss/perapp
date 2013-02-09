@@ -70,7 +70,6 @@ import android.widget.ToggleButton;
 
 public class PerApp extends Activity implements ServiceConnection {
 	public static final boolean DEBUG = true;
-	static final String MARKET = "Market";
 	
 	public static final DecimalFormat decimal = new DecimalFormat("0.0");	
 
@@ -89,6 +88,8 @@ public class PerApp extends Activity implements ServiceConnection {
 	public static Setting[] getSettings(Context context, SharedPreferences pref) {
 		Setting[] allSettings = new Setting[]{ 
 				new FontSize(context, pref),
+				new IMESetting(context, pref),
+				//new GPSSetting(context, pref),
 				new OrientationSetting(context, pref),
 				new TimeoutSetting(context, pref),
 				new BoostSetting(context, pref),
@@ -204,10 +205,10 @@ public class PerApp extends Activity implements ServiceConnection {
         alertDialog.setMessage(Html.fromHtml(text));
         
         alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, 
-        		"Go to "+MARKET, 
+        		"Go to "+((MarketDetector.detect(PerApp.this)==MarketDetector.APPSTORE) ? "Appstore" : "Play"), 
         	new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-            	market();
+            	MarketDetector.launch(PerApp.this);
             	if (exit) {
         			stopService();
             		finish();
@@ -232,24 +233,6 @@ public class PerApp extends Activity implements ServiceConnection {
 			}
 		});
         alertDialog.show();				
-	}
-	
-	private void market() {
-    	Intent i = new Intent(Intent.ACTION_VIEW);
-    	i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    	if (MARKET.contains("Appstore")) {
-          // string split up to fool switcher.sh
-    		i.setData(Uri.parse("http://www.amazon.com/gp/mas/dl/android?p=mobi.omegacentauri.Screen" +"Dim."+"Full"));
-    	}
-    	else if (MARKET.contains("AndroidPIT")) {
-            // string split up to fool switcher.sh
-    		i.setData(Uri.parse("http://www.androidpit.com/en/android/market/apps/app/mobi.omegacentauri.Screen" +"Dim."+"Full"));
-    	}
-    	else {
-          // string split up to fool switcher.sh
-    		i.setData(Uri.parse("market://details?id=mobi.omegacentauri.Screen" +"Dim."+"Full"));
-    	}
-    	startActivity(i);
 	}
 	
 	private void changeLog() {

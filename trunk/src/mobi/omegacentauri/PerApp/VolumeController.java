@@ -1,11 +1,13 @@
 package mobi.omegacentauri.PerApp;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.audiofx.Equalizer;
 import android.os.Build;
 import android.util.Log;
 
+@SuppressLint("NewApi")
 public class VolumeController {
 	private AudioManager am;
 	private int extraDB = 1500;

@@ -54,4 +54,11 @@
 <!--         <item>hard to change, automatic</item>
         <item>hard to change, force</item>  -->
         </string-array>     
+     <string-array name="gps_values">
+        <item>no change</item>
+        <item>turn on</item>
+        <item>turn off</item>
+        <item>turn on, then off</item>
+        <item>turn off, then on</item>
+        </string-array>
 </resources>
