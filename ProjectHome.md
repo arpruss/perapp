@@ -1,0 +1,1 @@
+Easily extendable per-app settings app for Android.
